@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: "*/15 * * * *"
   repository_dispatch:
-    types: [on-demand-test]
+    types: [Synchronise-release]
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}

@@ -3,7 +3,7 @@ name: Synchronise release versions
 on:
   schedule:
     - cron: "*/15 * * * *"
-  # workflow_dispatch:
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}

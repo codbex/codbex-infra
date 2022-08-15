@@ -3,6 +3,8 @@ name: Synchronise release versions
 on:
   schedule:
     - cron: "*/15 * * * *"
+  repository_dispatch:
+    types: [on-demand-test]
   workflow_dispatch:
 
 env:

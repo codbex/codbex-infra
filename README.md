@@ -1,2 +1,2 @@
 # codbex-release-check
-Github action check Dirigible release
+Github action check for new Dirigible release

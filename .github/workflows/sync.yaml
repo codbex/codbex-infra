@@ -5,6 +5,7 @@ on:
     - cron: "*/15 * * * *"
   repository_dispatch:
     types: [on-demand-test]
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}

@@ -81,4 +81,4 @@ jobs:
       - name: Change image version for Dirigible Trial Deploy
         if: steps.release.outputs.NEW_VERSION == 'true'
         run: |-
-          kubectl set image deployment/dirigible dirigible=dirigiblelabs/dirigible-keycloak:"${{ env.VERSION }}" -n dirigible
+          kubectl set image deployment/trial-dirigible dirigible=dirigiblelabs/dirigible-keycloak:"${{ env.VERSION }}" -n dirigible

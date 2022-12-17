@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync_releases:
-    runs-on: ubuntu-lates
+   clean-pods:
+    runs-on: ubuntu-latest
 
     steps:
     - id: 'auth'

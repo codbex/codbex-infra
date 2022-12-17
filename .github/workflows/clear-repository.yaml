@@ -1,0 +1,26 @@
+name: Clean-repository
+
+on:
+  repository_dispatch:
+    types: [Clean-repository]
+  workflow_dispatch:
+
+jobs:
+   clean-repository:
+    runs-on: ubuntu-latest
+
+    steps:
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: ${{ secrets.GKE_SA_KEY }}
+
+    - uses: google-github-actions/get-gke-credentials@v1
+      with:
+        cluster_name: ${{ secrets.GKE_CLUSTER }}
+        location: ${{ secrets.GKE_ZONE }}
+
+    - name: "Clean failed pods"
+      run: |
+        kubectl exec -it deploy/trial-dirigible -n dirigible -- rm -r /usr/local/tomcat/target/dirigible/repository/root
+        kubectl rollout restart deployment trial-dirigible -n dirigible

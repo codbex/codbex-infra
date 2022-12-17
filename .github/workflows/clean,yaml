@@ -1,0 +1,24 @@
+name: Clean-pods
+
+on:
+  repository_dispatch:
+    types: [Clean-pods]
+  workflow_dispatch:
+
+jobs:
+  sync_releases:
+    runs-on: ubuntu-lates
+
+    steps:
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: ${{ secrets.GKE_SA_KEY }}
+
+    - uses: google-github-actions/get-gke-credentials@v1
+      with:
+        cluster_name: ${{ secrets.GKE_CLUSTER }}
+        location: ${{ secrets.GKE_ZONE }}
+
+    - name: "Clean failed pods"
+      run: kubectl delete pods --field-selector status.phase=Failed --all-namespaces

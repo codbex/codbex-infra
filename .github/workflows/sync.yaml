@@ -7,9 +7,9 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-  GKE_CLUSTER: dirigible-cluster
-  GKE_ZONE: europe-west1-b
-  DEPLOYMENT_NAME: dirigible
+  GKE_CLUSTER: ${{ secrets.GKE_CLUSTER }}
+  GKE_ZONE: ${{ secrets.GKE_ZONE }}
+  DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
 
 jobs:
   sync_releases:
@@ -63,7 +63,7 @@ jobs:
       # Authentication via credentials json
       - id: 'auth'
         if: steps.release.outputs.NEW_VERSION == 'true'
-        uses: 'google-github-actions/auth@v0'
+        uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: '${{ secrets.GKE_SA_KEY }}'
 

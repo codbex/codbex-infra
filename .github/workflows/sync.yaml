@@ -74,7 +74,7 @@ jobs:
         uses: google-github-actions/setup-gcloud@v0
       - run: |
           if [[ ${{ steps.release.outputs.NEW_VERSION }} == 'true' ]] ; then
-          USE_GKE_GCLOUD_AUTH_PLUGIN=True
+          export USE_GKE_GCLOUD_AUTH_PLUGIN=True
           gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" ;
           fi
 

@@ -55,7 +55,7 @@ jobs:
           echo "Version: ${{ env.VERSION }}"
 
       - name: Update artifact version
-        if: env.NEW_VERSION == 'true'
+        if: ${{ env.VERSION }} == 'true'
         uses: EndBug/add-and-commit@v9
         with:
           author_name: Krasimir Dermendzhiev
@@ -65,7 +65,7 @@ jobs:
 
       # Authentication via credentials json
       - id: 'auth'
-        if: env.NEW_VERSION == 'true'
+        if: ${{ env.VERSION }} == 'true'
         uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: '${{ secrets.GKE_SA_KEY }}'
@@ -73,7 +73,7 @@ jobs:
        # Setup gcloud CLI
        # Get the GKE credentials so we can deploy to the cluster
       - name: Set up Cloud SDK
-        if: env.NEW_VERSION == 'true'
+        if: ${{ env.VERSION }} == 'true'
         uses: google-github-actions/setup-gcloud@v0
       - run: |
           if [[ ${{ steps.release.outputs.NEW_VERSION }} == 'true' ]] ; then
@@ -84,6 +84,6 @@ jobs:
 
       # Change Dirigible version
       - name: Change image version for Dirigible Trial Deploy
-        if: env.NEW_VERSION == 'true'
+        if: ${{ env.VERSION }} == 'true'
         run: |-
           kubectl set image deployment/trial-dirigible dirigible=dirigiblelabs/dirigible-keycloak:"${{ env.VERSION }}" -n dirigible

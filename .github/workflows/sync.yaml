@@ -37,10 +37,11 @@ jobs:
           echo "PREVIOS_VERSION: $PREVIOUS_VERSION"
           if [ "$PREVIOUS_VERSION" == "$CURRENT_VERSION" ]; then
             VERSION=$PREVIOUS_VERSION
-            echo '::set-output name=NEW_VERSION::false'
+            echo "NEW_VERSION=false" >> $GITHUB_ENV
+      # echo '::set-output name=NEW_VERSION::false'
           else 
             echo $CURRENT_VERSION > artifact/release.txt
-            echo '::set-output name=NEW_VERSION::true'
+            echo "NEW_VERSION=true" >> $GITHUB_ENV
             CURRENT_VERSION=${CURRENT_VERSION:1} 
             echo "VERSION=$CURRENT_VERSION" >> $GITHUB_ENV 
           fi
@@ -48,11 +49,11 @@ jobs:
 
       - name: New version result
         run: |
-          echo "${{ steps.release.outputs.NEW_VERSION }}"
-          echo "${{ env.VERSION }}"
+          echo "New version: "${{ env.NEW_VERSION }}"
+          echo "Version: ${{ env.VERSION }}"
 
       - name: Keep current version
-        if: steps.release.outputs.NEW_VERSION == 'true'
+        if: env.NEW_VERSION == 'true'
         uses: EndBug/add-and-commit@v9
         with:
           author_name: Krasimir Dermendzhiev
@@ -62,7 +63,7 @@ jobs:
 
       # Authentication via credentials json
       - id: 'auth'
-        if: steps.release.outputs.NEW_VERSION == 'true'
+        if: env.NEW_VERSION == 'true'
         uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: '${{ secrets.GKE_SA_KEY }}'
@@ -70,7 +71,7 @@ jobs:
        # Setup gcloud CLI
        # Get the GKE credentials so we can deploy to the cluster
       - name: Set up Cloud SDK
-        if: steps.release.outputs.NEW_VERSION == 'true'
+        if: env.NEW_VERSION == 'true'
         uses: google-github-actions/setup-gcloud@v0
       - run: |
           if [[ ${{ steps.release.outputs.NEW_VERSION }} == 'true' ]] ; then
@@ -81,6 +82,6 @@ jobs:
 
       # Change Dirigible version
       - name: Change image version for Dirigible Trial Deploy
-        if: steps.release.outputs.NEW_VERSION == 'true'
+        if: env.NEW_VERSION == 'true'
         run: |-
           kubectl set image deployment/trial-dirigible dirigible=dirigiblelabs/dirigible-keycloak:"${{ env.VERSION }}" -n dirigible

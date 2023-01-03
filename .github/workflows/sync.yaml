@@ -55,7 +55,7 @@ jobs:
           echo "Version: ${{ env.VERSION }}"
 
       - name: Update artifact version
-        if: ${{ env.VERSION }} == 'true'
+        if: "${{ env.VERSION == 'true' }}"
         uses: EndBug/add-and-commit@v9
         with:
           author_name: Krasimir Dermendzhiev

@@ -55,7 +55,7 @@ jobs:
           echo "Version: ${{ env.VERSION }}"
 
       - name: Update artifact version
-        if: "${{ env.VERSION }}" == 'true'
+        if: ${{ env.VERSION }} == 'true'
         uses: EndBug/add-and-commit@v9
         with:
           author_name: Krasimir Dermendzhiev
@@ -63,27 +63,27 @@ jobs:
           message: 'Update sync'
           add: 'artifact/release.txt'
 
-      # # Authentication via credentials json
-      # - id: 'auth'
-      #   if: ${{ env.VERSION }} == 'true'
-      #   uses: 'google-github-actions/auth@v1'
-      #   with:
-      #     credentials_json: '${{ secrets.GKE_SA_KEY }}'
+      # Authentication via credentials json
+      - id: 'auth'
+        if: ${{ env.VERSION }} == 'true'
+        uses: 'google-github-actions/auth@v1'
+        with:
+          credentials_json: '${{ secrets.GKE_SA_KEY }}'
 
-      #  # Setup gcloud CLI
-      #  # Get the GKE credentials so we can deploy to the cluster
-      # - name: Set up Cloud SDK
-      #   if: ${{ env.VERSION }} == 'true'
-      #   uses: google-github-actions/setup-gcloud@v0
-      # - run: |
-      #     if [[ ${{ steps.release.outputs.NEW_VERSION }} == 'true' ]] ; then
-      #     export USE_GKE_GCLOUD_AUTH_PLUGIN=True
-      #     gcloud components install gke-gcloud-auth-plugin
-      #     gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" ;
-      #     fi
+       # Setup gcloud CLI
+       # Get the GKE credentials so we can deploy to the cluster
+      - name: Set up Cloud SDK
+        if: ${{ env.VERSION }} == 'true'
+        uses: google-github-actions/setup-gcloud@v0
+      - run: |
+          if [[ ${{ steps.release.outputs.NEW_VERSION }} == 'true' ]] ; then
+          export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+          gcloud components install gke-gcloud-auth-plugin
+          gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE" ;
+          fi
 
-      # # Change Dirigible version
-      # - name: Change image version for Dirigible Trial Deploy
-      #   if: ${{ env.VERSION }} == 'true'
-      #   run: |-
-      #     kubectl set image deployment/trial-dirigible dirigible=dirigiblelabs/dirigible-keycloak:"${{ env.VERSION }}" -n dirigible
+      # Change Dirigible version
+      - name: Change image version for Dirigible Trial Deploy
+        if: ${{ env.VERSION }} == 'true'
+        run: |-
+          kubectl set image deployment/trial-dirigible dirigible=dirigiblelabs/dirigible-keycloak:"${{ env.VERSION }}" -n dirigible

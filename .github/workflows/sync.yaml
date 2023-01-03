@@ -41,7 +41,7 @@ jobs:
             echo "NEW_VERSION=false" >> $GITHUB_ENV
           fi
 
-          if [ "$CURRENT_VERSION" ]; then
+          if [ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" ]; then
             echo $CURRENT_VERSION > artifact/release.txt
             echo "NEW_VERSION=true" >> $GITHUB_ENV
             CURRENT_VERSION=${CURRENT_VERSION:1} 

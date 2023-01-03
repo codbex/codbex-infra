@@ -71,11 +71,14 @@ jobs:
         with:
           credentials_json: '${{ secrets.GKE_SA_KEY }}'
 
-       # Setup gcloud CLI
+       # Set up gcloud CLI
        # Get the GKE credentials so we can deploy to the cluster
-      - id: 'Set up Cloud SDK'
+      - name: 'Set up Cloud SDK'
         if: "${{ env.NEW_VERSION == 'true' }}"
         uses: google-github-actions/setup-gcloud@v0
+
+      - name: Set up gcloud
+        if: "${{ env.NEW_VERSION == 'true' }}"
         run: |
           if [[ ${{ env.NEW_VERSION }} == 'true' ]] ; then
           export USE_GKE_GCLOUD_AUTH_PLUGIN=True

@@ -70,7 +70,7 @@ jobs:
       #   with:
       #     credentials_json: '${{ secrets.GKE_SA_KEY }}'
 
-      #  # Setup gcloud CLI
+      #  Setup gcloud CLI
       #  # Get the GKE credentials so we can deploy to the cluster
       # - name: Set up Cloud SDK
       #   if: env.NEW_VERSION == 'true'

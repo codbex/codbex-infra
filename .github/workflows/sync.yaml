@@ -63,7 +63,7 @@ jobs:
           message: 'Update sync'
           add: 'artifact/release.txt'
 
-      # # Authentication via credentials json
+      # Authentication via credentials json
       # - id: 'auth'
       #   if: env.NEW_VERSION == 'true'
       #   uses: 'google-github-actions/auth@v1'

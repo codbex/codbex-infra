@@ -73,7 +73,7 @@ jobs:
 
        # Setup gcloud CLI
        # Get the GKE credentials so we can deploy to the cluster
-      - name: Set up Cloud SDK
+      - id: 'Set up Cloud SDK'
         if: "${{ env.NEW_VERSION == 'true' }}"
         uses: google-github-actions/setup-gcloud@v0
         run: |

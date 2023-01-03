@@ -76,7 +76,7 @@ jobs:
       - name: Set up Cloud SDK
         if: "${{ env.NEW_VERSION == 'true' }}"
         uses: google-github-actions/setup-gcloud@v0
-      - run: |
+        run: |
           if [[ ${{ env.NEW_VERSION }} == 'true' ]] ; then
           export USE_GKE_GCLOUD_AUTH_PLUGIN=True
           gcloud components install gke-gcloud-auth-plugin

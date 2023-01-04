@@ -37,7 +37,7 @@ jobs:
           PREVIOUS_VERSION=$(head -1 artifact/release.txt)
           echo "PREVIOS_VERSION: $PREVIOUS_VERSION"
 
-          if [[ "$PREVIOUS_VERSION" == "$CURRENT_VERSION" && -z "$CURRENT_VERSION" ]]; then
+          if [[ "$PREVIOUS_VERSION" == "$CURRENT_VERSION" || -z "$CURRENT_VERSION" ]]; then
             VERSION=${PREVIOUS_VERSION:1}
             echo "VERSION=$VERSION" >> $GITHUB_ENV 
             echo "NEW_VERSION=false" >> $GITHUB_ENV

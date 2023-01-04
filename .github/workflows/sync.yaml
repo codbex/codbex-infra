@@ -30,19 +30,18 @@ jobs:
       - name: Check for new release
         id: release
         run: |
-          CURRENT_VERSION=$(curl --silent "https://api.github.com/repos/eclipse/dirigible/releases/latest" |
-          grep '"tag_name":' | 
-          sed -E 's/.*"([^"]+)".*/\1/')
+          CURRENT_VERSION=""
           echo "LATEST_VERSION: $CURRENT_VERSION"
           PREVIOUS_VERSION=$(head -1 artifact/release.txt)
           echo "PREVIOS_VERSION: $PREVIOUS_VERSION"
-          if [ "$PREVIOUS_VERSION" == "$CURRENT_VERSION" ]; then
+
+          if [ "$PREVIOUS_VERSION" == "$CURRENT_VERSION" ] && [ -z "$CURRENT_VERSION" ]; then
             VERSION=${PREVIOUS_VERSION:1}
             echo "VERSION=$VERSION" >> $GITHUB_ENV 
             echo "NEW_VERSION=false" >> $GITHUB_ENV
           fi
 
-          if [ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" ]; then
+          if [ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" ] && [ ! -z "$CURRENT_VERSION" ]; then
             echo $CURRENT_VERSION > artifact/release.txt
             echo "NEW_VERSION=true" >> $GITHUB_ENV
             CURRENT_VERSION=${CURRENT_VERSION:1} 

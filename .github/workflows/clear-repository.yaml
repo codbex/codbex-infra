@@ -20,7 +20,7 @@ jobs:
         cluster_name: ${{ secrets.GKE_CLUSTER }}
         location: ${{ secrets.GKE_ZONE }}
 
-    - name: "Clean failed pods"
+    - name: "Clean Repository"
       run: |
-        kubectl exec -it deploy/trial-dirigible -n dirigible -- rm -r /usr/local/tomcat/target/dirigible/repository/root
-        kubectl rollout restart deployment trial-dirigible -n dirigible
+        kubectl -n dirigible exec -it deploy/trial-dirigible -- rm -r /target
+        kubectl -n dirigible rollout restart deployment trial-dirigible

@@ -27,5 +27,5 @@ jobs:
           docker buildx create --name codbex-builder
           docker buildx use codbex-builder
           docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
-          docker login ghcr.io -u ${{ inputs.docker-user }} -p ${{ inputs.docker-password }}
+          docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
           docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:latest -o type=image --platform=linux/arm64,linux/amd64 .

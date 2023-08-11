@@ -6,12 +6,6 @@ on:
       application-name:
         required: true
         type: string
-      docker-user:
-        required: true
-        type: string
-      docker-password:
-        required: true
-        type: string
 
 jobs:
   build:

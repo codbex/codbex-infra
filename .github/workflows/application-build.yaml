@@ -1,0 +1,31 @@
+name: Build - Application
+
+on:
+  workflow_call:
+    inputs:
+      application-name:
+        required: true
+        type: string
+      docker-user:
+        required: true
+        type: string
+      docker-password:
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Build and Push Docker Image
+        run: |
+          docker buildx create --name codbex-builder
+          docker buildx use codbex-builder
+          docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+          docker login ghcr.io -u ${{ inputs.docker-user }} -p ${{ inputs.docker-password }}
+          docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:latest -o type=image --platform=linux/arm64,linux/amd64 .

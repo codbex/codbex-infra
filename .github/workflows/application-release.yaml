@@ -1,0 +1,45 @@
+name: Application - Release
+
+on:
+  workflow_call:
+    inputs:
+      application-name:
+        required: true
+        type: string
+      release-version:
+        type: string
+        required: true
+      release-content:
+        type: string
+        required: true
+    
+run-name: 'version set to ${{ github.event.inputs.releaseVersion }} for release'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Build and Push Docker Image
+      run: |
+        docker buildx create --name codbex-builder
+        docker buildx use codbex-builder
+        docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+        docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:${{ github.event.inputs.releaseVersion }} -o type=image --platform=linux/arm64,linux/amd64 .
+
+    - name: "Create Release"
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: v${{ inputs.release-version }}
+        name: ${{ inputs.release-version }}
+        draft: false
+        prerelease: false
+        files: |
+          LICENSE
+        body: ${{ inputs.release-content }}

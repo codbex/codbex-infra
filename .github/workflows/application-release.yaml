@@ -24,6 +24,13 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: "Configure Git"
+      run: |
+        git fetch
+        git checkout ${{ inputs.branch }}
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
     - name: Build and Push Docker Image
       run: |
         docker buildx create --name codbex-builder
@@ -33,7 +40,9 @@ jobs:
         docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
 
     - name: Git Push Release Branch
-      run: git push --set-upstream origin ${{ inputs.release-version }}
+      run: |
+        git checkout -b ${{ inputs.release-version }}
+        git push --set-upstream origin ${{ inputs.release-version }}
 
     - name: "Create Release"
       uses: softprops/action-gh-release@v1

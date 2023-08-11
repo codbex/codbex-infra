@@ -16,7 +16,7 @@ on:
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
     steps:
 

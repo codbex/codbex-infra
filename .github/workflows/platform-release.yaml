@@ -15,6 +15,9 @@ on:
       release-content:
         type: string
         required: true
+      maven-release:
+        type: boolean
+        default: false
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -36,10 +39,23 @@ jobs:
         restore-keys: ${{ runner.os }}-maven-
 
     - name: Set up JDK Corretto 20
+      if: ${{ !inputs.maven-release }}
       uses: actions/setup-java@v3
       with:
         distribution: 'corretto'
         java-version: '20'
+        architecture: x64
+
+    - name: Set up JDK Corretto 20 with Maven Release Properties
+      if: ${{ !inputs.maven-release }}
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'corretto'
+        java-version: '20'        
+        server-id: ossrh
+        server-username: MAVEN_USERNAME
+        server-password: MAVEN_PASSWORD
+        gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
         architecture: x64
 
     - name: "Configure Git"
@@ -66,6 +82,14 @@ jobs:
         docker buildx build --tag ${{ inputs.platform-name }} -o type=image --platform=linux/arm64,linux/amd64 .
         docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker buildx build --push --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
+
+    - name: Maven Publish Package
+      if: ${{ inputs.maven-release }}
+      run: mvn deploy -P release -DskipTests
+      env:
+        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
     - name: Maven Set Snapshot Version
       run: |

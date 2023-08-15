@@ -47,7 +47,7 @@ jobs:
         architecture: x64
 
     - name: Set up JDK Corretto 20 with Maven Release Properties
-      if: ${{ !inputs.maven-release }}
+      if: ${{ inputs.maven-release }}
       uses: actions/setup-java@v3
       with:
         distribution: 'corretto'

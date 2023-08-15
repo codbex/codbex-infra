@@ -1,0 +1,88 @@
+name: Platform - Release
+
+on:
+  workflow_call:
+    inputs:
+      platform-name:
+        required: true
+        type: string
+      release-version:
+        type: string
+        required: true
+      snapshot-version:
+        type: string
+        required: true
+      release-content:
+        type: string
+        required: true
+    
+run-name: 'version set to ${{ inputs.release-version }} for release'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Cache local Maven repository
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-maven-
+
+    - name: Set up JDK Corretto 20
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'corretto'
+        java-version: '20'
+        architecture: x64
+
+    - name: "Configure Git"
+      run: |
+        git fetch
+        git checkout ${{ inputs.branch }}
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+    - name: Maven Set Release Version
+      run: |
+        mvn versions:set -DnewVersion=${{ inputs.release-version }}
+        git add .
+        git commit -m "version set to ${{ inputs.release-version }} for release"
+
+    - name: Maven Build
+      run: mvn clean install
+
+    - name: Build and Push Docker Image
+      run: |
+        docker buildx create --name codbex-builder
+        docker buildx use codbex-builder
+        cd application
+        docker buildx build --tag ${{ inputs.platform-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+        docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker buildx build --push --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
+
+    - name: Maven Set Snapshot Version
+      run: |
+        mvn versions:set -DnewVersion=${{ inputs.snapshot-version }}
+        git add .
+        git commit -m "version set to ${{ inputs.snapshot-version }} for development"
+        git push origin main
+        git checkout -b ${{ inputs.release-version }}
+        git push --set-upstream origin ${{ inputs.release-version }}
+
+    - name: "Create Release"
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: v${{ inputs.release-version }}
+        name: ${{ inputs.release-version }}
+        draft: false
+        prerelease: false
+        files: |
+          LICENSE
+        body: ${{ inputs.release-content }}

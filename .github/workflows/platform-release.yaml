@@ -18,6 +18,9 @@ on:
       maven-release:
         type: boolean
         default: false
+      buildx-enabled:
+        type: boolean
+        default: true
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -74,7 +77,16 @@ jobs:
     - name: Maven Build
       run: mvn clean install
 
-    - name: Build and Push Docker Image
+    - name: Build and Push Docker Image (buildx)
+      if: ${{ !inputs.buildx-enabled }}
+      run: |
+        cd application
+        docker build --tag ${{ inputs.platform-name }} .
+        docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker push --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
+
+    - name: Build and Push Docker Image (buildx)
+      if: ${{ inputs.buildx-enabled }}
       run: |
         docker buildx create --name codbex-builder
         docker buildx use codbex-builder

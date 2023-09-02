@@ -81,7 +81,7 @@ jobs:
       if: ${{ !inputs.buildx-enabled }}
       run: |
         cd application
-        docker build ${{ inputs.platform-name }} .
+        docker build -t ${{ inputs.platform-name }} .
         docker tag ${{ inputs.platform-name }} ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
         docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker push ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}

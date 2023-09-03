@@ -6,6 +6,12 @@ on:
       application-name:
         required: true
         type: string
+      github-org:
+        type: string
+        default: codbex
+      buildx-enabled:
+        type: boolean
+        default: true
 
 jobs:
   build:
@@ -17,9 +23,18 @@ jobs:
           fetch-depth: 0
 
       - name: Build and Push Docker Image
+        if: ${{ !inputs.buildx-enabled }}
+        run: |
+          docker build -t ${{ inputs.application-name }} .
+          docker tag ${{ inputs.application-name }} ghcr.io/${{ inputs.github-org }}/${{ inputs.application-name }}:latest
+          docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push ghcr.io/${{ inputs.github-org }}/${{ inputs.platform-name }}:latest
+
+      - name: Build and Push Docker Image (buildx)
+        if: ${{ inputs.buildx-enabled }}
         run: |
           docker buildx create --name codbex-builder
           docker buildx use codbex-builder
           docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
           docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:latest -o type=image --platform=linux/arm64,linux/amd64 .
+          docker buildx build --push --tag ghcr.io/${{ inputs.github-org }}/${{ inputs.application-name }}:latest -o type=image --platform=linux/arm64,linux/amd64 .

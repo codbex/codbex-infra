@@ -12,6 +12,10 @@ on:
       docker-org:
         type: string
         default: codbex
+      docker-username:
+        type: string
+      docker-password:
+        type: string
       buildx-enabled:
         type: boolean
         default: true
@@ -30,7 +34,8 @@ jobs:
         run: |
           docker build -t ${{ inputs.application-name }} .
           docker tag ${{ inputs.application-name }} ${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.application-name }}:latest
-          docker login ${{ inputs.docker-registry }} -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          # docker login ${{ inputs.docker-registry }} -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker login ${{ inputs.docker-registry }} -u ${{ inputs.docker-username }} -p ${{ inputs.docker-password }}
           docker push ${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.application-name }}:latest
 
       - name: Build and Push Docker Image (buildx)

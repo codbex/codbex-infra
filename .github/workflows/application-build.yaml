@@ -6,7 +6,10 @@ on:
       application-name:
         required: true
         type: string
-      github-org:
+      docker-registry:
+        type: string
+        default: ghcr.io
+      docker-org:
         type: string
         default: codbex
       buildx-enabled:
@@ -26,9 +29,9 @@ jobs:
         if: ${{ !inputs.buildx-enabled }}
         run: |
           docker build -t ${{ inputs.application-name }} .
-          docker tag ${{ inputs.application-name }} ghcr.io/${{ inputs.github-org }}/${{ inputs.application-name }}:latest
-          docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker push ghcr.io/${{ inputs.github-org }}/${{ inputs.platform-name }}:latest
+          docker tag ${{ inputs.application-name }} ${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.application-name }}:latest
+          docker login ${{ inputs.docker-registry }} -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push ${{ inputs.docker-registry }}/${{ inputs.docker-org }}/${{ inputs.application-name }}:latest
 
       - name: Build and Push Docker Image (buildx)
         if: ${{ inputs.buildx-enabled }}

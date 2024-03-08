@@ -92,4 +92,4 @@ jobs:
         with:
           retention-days: 1
           name: selenide-screenshots
-          path: tests/build/reports/tests
+          path: application/build/reports/tests

@@ -6,6 +6,12 @@ on:
       platform-name:
         required: true
         type: string
+      docker-build:
+        type: boolean
+        default: true
+      integration-tests:
+        type: boolean
+        default: true
 
 jobs:
   pull-request:
@@ -34,6 +40,7 @@ jobs:
       run: mvn clean install
 
     - name: Build Docker Image
+      if: ${{ inputs.docker-build }}
       run: |
         docker buildx create --name codbex-builder
         docker buildx use codbex-builder
@@ -41,6 +48,7 @@ jobs:
         docker buildx build --tag ${{ inputs.platform-name }} -o type=image --platform=linux/arm64,linux/amd64 .
 
   integration-tests:
+    if: ${{ inputs.integration-tests }}
     runs-on: ${{ matrix.os }}-latest
     continue-on-error: true
     strategy:

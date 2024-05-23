@@ -85,7 +85,7 @@ jobs:
         run: '/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version'
       - if: runner.os == 'Windows'
         run: (Get-Item (Get-Command chrome).Source).VersionInfo.ProductVersion
-      - uses: actions/cache@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Cache local Maven repository

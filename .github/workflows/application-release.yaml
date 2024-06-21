@@ -14,7 +14,7 @@ on:
         required: true
       release-package:
         type: boolean
-        default: true
+        default: false
       release-package-locations:
         type: string
         description: A comma-separated list of package locations
@@ -47,14 +47,6 @@ jobs:
         git checkout ${{ inputs.branch }}
         git config user.name "$GITHUB_ACTOR"
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
-
-    - name: Build and Push Docker Image
-      run: |
-        docker buildx create --name codbex-builder
-        docker buildx use codbex-builder
-        docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
-        docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
 
     - name: Update package.json version, Build TypeScript and Publish Packages
       if: ${{ inputs.release-package }}
@@ -107,6 +99,14 @@ jobs:
 
         git commit -m "version set to ${{ inputs.release-version }} for release"
         git push
+
+    - name: Build and Push Docker Image
+      run: |
+        docker buildx create --name codbex-builder
+        docker buildx use codbex-builder
+        docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+        docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
 
     - name: Git Push Release Branch
       run: |

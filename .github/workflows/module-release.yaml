@@ -1,0 +1,119 @@
+name: Module - Release
+
+on:
+  workflow_call:
+    inputs:
+      packages:
+        type: string
+        description: A comma-separated list of packages
+      packages-build:
+        type: string
+        description: A comma-separated list of packages to build
+      release-version:
+        type: string
+        required: true
+      release-content:
+        type: string
+        required: true
+    
+run-name: 'version set to ${{ inputs.release-version }} for release'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+        fetch-depth: 0
+
+    - name: Install NodeJS
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
+    - name: Install TypeScript compiler
+      run: npm i -g typescript
+
+    - name: "Configure Git"
+      run: |
+        git fetch
+        git checkout ${{ inputs.branch }}
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+    - name: Update package.json version, Build TypeScript and Publish Packages
+      run: |
+        IFS=',' read -r -a packages <<< "${{ inputs.packages }}"
+        for package in "${packages[@]}"; do
+          cd $package
+          npm version ${{ inputs.release-version }} --no-git-tag-version
+          git add package.json
+          cd ../
+        done
+
+        IFS=',' read -r -a buildPackages <<< "${{ inputs.packages-build }}"
+        for buildPackage in "${buildPackages[@]}"; do
+          cd $buildPackage
+          tsc --pretty > tsc-output.log 2>&1 || true
+          cd ../
+        done
+
+        for buildPackage in "${buildPackages[@]}"; do
+          cd $buildPackage
+          grep -v 'TS2688' tsc-output.log > filtered-tsc-output.log
+          cd ../
+        done
+
+        echo "Print Filtered Errors"
+
+        for buildPackage in "${buildPackages[@]}"; do
+        cd $buildPackage
+        cat filtered-tsc-output.log
+        cd ../
+        done
+
+        echo "Fail on Non-Ignored Errors"
+
+        for buildPackage in "${buildPackages[@]}"; do
+          cd $buildPackage
+          if grep -q 'error TS' filtered-tsc-output.log; then
+            exit 1
+          fi
+          cd ../
+        done
+
+        for buildPackage in "${buildPackages[@]}"; do
+          cd $buildPackage
+          rm -rf tsc-output.log
+          rm -rf filtered-tsc-output.log
+          cd ../
+        done
+        
+        for package in "${packages[@]}"; do
+          cd $package
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
+          npm publish
+          rm -rf .npmrc
+          cd ../
+        done
+
+    - name: Git Push Release Branch
+      run: |
+        git commit -m "version set to ${{ inputs.release-version }} for release"
+        git push
+        git checkout -b ${{ inputs.release-version }}
+        git push --set-upstream origin ${{ inputs.release-version }}
+
+    - name: "Create Release"
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: v${{ inputs.release-version }}
+        name: ${{ inputs.release-version }}
+        draft: false
+        prerelease: false
+        files: |
+          LICENSE
+        body: ${{ inputs.release-content }}

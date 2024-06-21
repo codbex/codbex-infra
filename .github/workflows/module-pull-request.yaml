@@ -1,0 +1,58 @@
+name: Module - Pull Request
+
+on:
+  workflow_call:
+    inputs:
+      packages-build:
+        required: true
+        type: string
+
+jobs:
+  pull-request:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install TypeScript compiler
+        run: npm i -g typescript
+
+      - name: Update package.json version, Build TypeScript and Publish Packages
+        run: |
+          IFS=',' read -r -a buildPackages <<< "${{ inputs.packages-build }}"
+          for buildPackage in "${buildPackages[@]}"; do
+            cd $buildPackage
+            tsc --pretty > tsc-output.log 2>&1 || true
+            cd ../
+          done
+
+          for buildPackage in "${buildPackages[@]}"; do
+            cd $buildPackage
+            grep -v 'TS2688' tsc-output.log > filtered-tsc-output.log
+            cd ../
+          done
+
+          echo "Print Filtered Errors"
+
+          for buildPackage in "${buildPackages[@]}"; do
+          cd $buildPackage
+          cat filtered-tsc-output.log
+          cd ../
+          done
+
+          echo "Fail on Non-Ignored Errors"
+
+          for buildPackage in "${buildPackages[@]}"; do
+            cd $buildPackage
+            if grep -q 'error TS' filtered-tsc-output.log; then
+              exit 1
+            fi
+            cd ../
+          done

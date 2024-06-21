@@ -49,59 +49,6 @@ jobs:
         git config user.name "$GITHUB_ACTOR"
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-    - name: Update package.json version, Build TypeScript and Publish Packages
-      if: ${{ inputs.release-package }}
-      run: |
-        IFS=',' read -r -a packages <<< "${{ inputs.release-package-locations }}"
-        for package in "${packages[@]}"; do
-          cd $package
-          npm version ${{ inputs.release-version }} --no-git-tag-version
-          git add package.json
-          cd ../
-        done
-
-        IFS=',' read -r -a buildLocations <<< "${{ inputs.release-package-build-locations }}"
-        for buildLocation in "${buildLocations[@]}"; do
-          cd $buildLocation
-          tsc --pretty > tsc-output.log 2>&1 || true
-          cd ../
-        done
-
-        for buildLocation in "${buildLocations[@]}"; do
-          cd $buildLocation
-          grep -v 'TS2688' tsc-output.log > filtered-tsc-output.log
-          cd ../
-        done
-
-        echo "Print Filtered Errors"
-
-        for buildLocation in "${buildLocations[@]}"; do
-        cd $buildLocation
-        cat filtered-tsc-output.log
-        cd ../
-        done
-
-        echo "Fail on Non-Ignored Errors"
-
-        for buildLocation in "${buildLocations[@]}"; do
-          cd $buildLocation
-          if grep -q 'error TS' filtered-tsc-output.log; then
-            exit 1
-          fi
-          cd ../
-        done
-        
-        for package in "${packages[@]}"; do
-          cd $package
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
-          npm publish
-          rm -rf .npmrc
-          cd ../
-        done
-
-        git commit -m "version set to ${{ inputs.release-version }} for release"
-        git push
-
     - name: Build and Push Docker Image
       run: |
         docker buildx create --name codbex-builder

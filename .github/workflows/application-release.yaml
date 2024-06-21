@@ -97,11 +97,10 @@ jobs:
           fi
           cd ../
         done
-
-        echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
-
+        
         for package in "${packages[@]}"; do
           cd $package
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
           npm publish
           cd ../
         done

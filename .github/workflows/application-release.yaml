@@ -58,7 +58,7 @@ jobs:
         docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
 
-    - name: Update package.json version and Build TypeScript
+    - name: Update package.json version, Build TypeScript and Publish Packages
       if: ${{ inputs.release-package }}
       run: |
         IFS=',' read -r -a packages <<< "${{ inputs.release-package-locations }}"
@@ -99,6 +99,17 @@ jobs:
           fi
           cd ../
         done
+
+        echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > .npmrc
+
+        for package in "${packages[@]}"; do
+          cd $package
+          npm publish
+          cd ../
+        done
+
+        git commit -m "version set to ${{ inputs.release-version }} for release"
+        git push
 
     - name: Git Push Release Branch
       run: |

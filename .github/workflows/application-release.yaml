@@ -17,12 +17,10 @@ on:
         default: true
       release-package-locations:
         type: string
-        description: 'A comma-separated list of package locations'
-        required: true
+        description: A comma-separated list of package locations
       release-package-build-locations:
         type: string
-        description: 'A comma-separated list of package build locations'
-        required: true
+        description: A comma-separated list of package build locations
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 

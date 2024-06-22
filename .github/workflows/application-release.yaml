@@ -46,7 +46,8 @@ jobs:
     - name: Install Dependencies
       if: ${{ inputs.install-dependencies }}
       run: |
-        echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
+        echo "@codbex:registry=https://npm.pkg.github.com
+        //npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
         npm install
         rm -rf .npmrc
 

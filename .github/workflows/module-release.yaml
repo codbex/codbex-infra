@@ -15,6 +15,9 @@ on:
       release-content:
         type: string
         required: true
+      release-content-enabled:
+        type: boolean
+        default: true
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -107,6 +110,7 @@ jobs:
         git push --set-upstream origin ${{ inputs.release-version }}
 
     - name: "Create Release"
+      if: ${{ inputs.release-content-enabled }}
       uses: softprops/action-gh-release@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}

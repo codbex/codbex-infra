@@ -50,7 +50,8 @@ jobs:
         IFS=',' read -r -a buildPackages <<< "${{ inputs.packages-build }}"
         for buildPackage in "${buildPackages[@]}"; do
           cd $buildPackage
-          echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+          echo "@codbex:registry=https://npm.pkg.github.com
+          //npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
           npm install
           rm -rf .npmrc
           cd ../

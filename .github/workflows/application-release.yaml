@@ -6,6 +6,9 @@ on:
       application-name:
         required: true
         type: string
+      install-dependencies:
+        type: boolean
+        default: false
       release-version:
         type: string
         required: true
@@ -35,12 +38,14 @@ jobs:
         fetch-depth: 0
 
     - name: Install NodeJS
+      if: ${{ inputs.install-dependencies }}
       uses: actions/setup-node@v4
       with:
         node-version: 18
 
-    - name: Install TypeScript compiler
-      run: npm i -g typescript
+    - name: Install Dependencies
+      if: ${{ inputs.install-dependencies }}
+      run: npm install
 
     - name: "Configure Git"
       run: |

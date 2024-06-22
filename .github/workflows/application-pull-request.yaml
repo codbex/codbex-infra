@@ -6,15 +6,28 @@ on:
       application-name:
         required: true
         type: string
+      install-dependencies:
+        type: boolean
+        default: false
 
 jobs:
   pull-request:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: Install NodeJS
+        if: ${{ inputs.install-dependencies }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Dependencies
+        if: ${{ inputs.install-dependencies }}
+        run: npm install
 
       - name: Build Docker Image
         run: |

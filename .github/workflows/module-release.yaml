@@ -14,7 +14,6 @@ on:
         required: true
       release-content:
         type: string
-        required: true
       release-content-enabled:
         type: boolean
         default: true

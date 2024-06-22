@@ -18,6 +18,9 @@ on:
       release-package:
         type: boolean
         default: false
+      release-create-branch:
+        type: boolean
+        default: true
       release-package-locations:
         type: string
         description: A comma-separated list of package locations
@@ -67,6 +70,7 @@ jobs:
         docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
 
     - name: Git Push Release Branch
+      if: ${{ inputs.release-create-branch }}
       run: |
         git checkout -b ${{ inputs.release-version }}
         git push --set-upstream origin ${{ inputs.release-version }}

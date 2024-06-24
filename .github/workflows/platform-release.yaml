@@ -63,7 +63,18 @@ jobs:
         server-password: MAVEN_PASSWORD
         gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
         architecture: x64
-
+        
+    - name: Install NodeJS
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18
+        
+    - name: Install esbuild
+      run: npm i -g esbuild
+      
+    - name: Install TypeScript compiler
+      run: npm i -g typescript
+      
     - name: "Configure Git"
       run: |
         git fetch

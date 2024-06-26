@@ -98,8 +98,7 @@ jobs:
         docker buildx create --use
         
         cd application
-        docker buildx build --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
-
+        docker buildx build --platform linux/amd64,linux/arm64 --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} --push .
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}
       run: mvn deploy -P release -DskipTests

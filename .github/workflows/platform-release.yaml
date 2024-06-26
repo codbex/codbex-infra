@@ -94,21 +94,11 @@ jobs:
     - name: Build and Push Docker Image
       if: ${{ inputs.docker-release && !inputs.buildx-enabled }}
       run: |
-        cd application
-        docker build -t ${{ inputs.platform-name }} .
-        docker tag ${{ inputs.platform-name }} ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
         docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        docker push ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
-
-    - name: Build and Push Docker Image (buildx)
-      if: ${{ inputs.docker-release && inputs.buildx-enabled }}
-      run: |
-        docker buildx create --name codbex-builder
-        docker buildx use codbex-builder
+        docker buildx create --use
+        
         cd application
-        docker buildx build --tag ${{ inputs.platform-name }} -o type=image --platform=linux/arm64,linux/amd64 .
-        docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-        docker buildx build --push --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
+        docker buildx build --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} -o type=image --platform=linux/arm64,linux/amd64 .
 
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}

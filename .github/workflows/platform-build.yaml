@@ -77,7 +77,7 @@ jobs:
         docker buildx create --use
         
         cd application
-        docker buildx build --tag ${{ inputs.platform-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+        docker buildx build --platform linux/amd64,linux/arm64 --tag ghcr.io/codbex/${{ inputs.platform-name }}:latest --push .
 
   integration-tests:
     if: ${{ inputs.integration-tests }}

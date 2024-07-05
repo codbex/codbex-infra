@@ -21,9 +21,6 @@ on:
       docker-release:
         type: boolean
         default: true
-      buildx-enabled:
-        type: boolean
-        default: true
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -92,7 +89,7 @@ jobs:
       run: mvn clean install
 
     - name: Build and Push Docker Image
-      if: ${{ inputs.docker-release && !inputs.buildx-enabled }}
+      if: ${{ inputs.docker-release }}
       run: |
         docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
         docker buildx create --use

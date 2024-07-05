@@ -4,8 +4,8 @@ on:
   workflow_call:
     inputs:
       packages-build:
-        required: true
         type: string
+        description: A comma-separated list of packages to build
 
 jobs:
   build:

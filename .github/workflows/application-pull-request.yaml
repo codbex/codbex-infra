@@ -33,6 +33,7 @@ jobs:
         run: |
           echo "@codbex:registry=https://npm.pkg.github.com
           //npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
+          cd ${{ inputs.dockerfile-location }}
           npm install
           rm -rf .npmrc
 

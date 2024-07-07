@@ -12,12 +12,8 @@ on:
       release-version:
         type: string
         required: true
-      release-notes:
-        type: boolean
-        default: true
       release-content:
         type: string
-        required: true
       release-create-branch:
         type: boolean
         default: true
@@ -75,7 +71,7 @@ jobs:
         git push --set-upstream origin ${{ inputs.release-version }}
 
     - name: "Create Release"
-      if: ${{ inputs.release-notes }}
+      if: ${{ inputs.release-content }}
       uses: softprops/action-gh-release@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}

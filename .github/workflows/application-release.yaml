@@ -15,18 +15,12 @@ on:
       release-content:
         type: string
         required: true
-      release-package:
-        type: boolean
-        default: false
       release-create-branch:
         type: boolean
         default: true
-      release-package-locations:
+      dockerfile-location:
         type: string
-        description: A comma-separated list of package locations
-      release-package-build-locations:
-        type: string
-        description: A comma-separated list of package build locations
+        default:  ./
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -63,6 +57,7 @@ jobs:
 
     - name: Build and Push Docker Image
       run: |
+        cd ${{ inputs.dockerfile-location }}
         docker buildx create --name codbex-builder
         docker buildx use codbex-builder
         docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .

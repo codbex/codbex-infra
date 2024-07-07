@@ -9,6 +9,9 @@ on:
       install-dependencies:
         type: boolean
         default: false
+      dockerfile-location:
+        type: string
+        default:  ./
 
 jobs:
   pull-request:
@@ -35,6 +38,7 @@ jobs:
 
       - name: Build Docker Image
         run: |
+          cd ${{ inputs.dockerfile-location }}
           docker buildx create --name codbex-builder
           docker buildx use codbex-builder
           docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .

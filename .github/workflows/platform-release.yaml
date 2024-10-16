@@ -128,11 +128,6 @@ jobs:
         sarif-file: image-scan-report.sarif.json
         summary: true
         only-fixed: true
-
-    - name: Upload Docker Scout SARIF Report
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: sarif.output.json
           
     - name: "Create Release"
       uses: softprops/action-gh-release@v1

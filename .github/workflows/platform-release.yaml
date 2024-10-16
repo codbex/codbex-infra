@@ -125,7 +125,7 @@ jobs:
       with:
         command: quickview,cves
         image: ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
-        sarif-file: image-scan-report.sarif.json
+        sarif-file: image-scan-report.sarif
         summary: true
         only-fixed: true
           
@@ -139,5 +139,5 @@ jobs:
         prerelease: false
         files: |
           LICENSE
-          image-scan-report.sarif.json
+          image-scan-report.sarif
         body: ${{ inputs.release-content }}

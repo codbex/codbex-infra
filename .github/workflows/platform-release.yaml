@@ -112,7 +112,28 @@ jobs:
         git push origin main
         git checkout -b ${{ inputs.release-version }}
         git push --set-upstream origin ${{ inputs.release-version }}
+    
+    # Scan docker image
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2.1.0
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
+    - name: Docker Scout Quickview and CVEs
+      uses: docker/scout-action@v1
+      with:
+        command: quickview,cves
+        image: ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
+        sarif-file: image-scan-report.sarif.json
+        summary: true
+        only-fixed: true
+
+    - name: Upload Docker Scout SARIF Report
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: sarif.output.json
+          
     - name: "Create Release"
       uses: softprops/action-gh-release@v1
       with:
@@ -123,4 +144,5 @@ jobs:
         prerelease: false
         files: |
           LICENSE
+          image-scan-report.sarif.json
         body: ${{ inputs.release-content }}

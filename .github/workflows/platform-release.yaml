@@ -127,7 +127,7 @@ jobs:
         image: ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
         sarif-file: image-scan-report.sarif
         summary: true
-        only-fixed: true
+        only-fixed: false
           
     - name: "Create Release"
       uses: softprops/action-gh-release@v1

@@ -154,7 +154,7 @@ jobs:
           image: ghcr.io/codbex/${{ inputs.platform-name }}:latest
           sarif-file: sarif.output.json
           summary: true
-          only-fixed: true
+          only-fixed: false
 
       - name: Docker Scout SBOM
         uses: docker/scout-action@v1

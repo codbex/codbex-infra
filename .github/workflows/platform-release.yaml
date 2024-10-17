@@ -21,6 +21,9 @@ on:
       docker-release:
         type: boolean
         default: true
+      scan-docker-image:
+        type: boolean
+        default: true
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -115,12 +118,14 @@ jobs:
     
     # Scan docker image
     - name: Log in to Docker Hub
+      if: ${{ inputs.scan-docker-image }}
       uses: docker/login-action@v2.1.0
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Docker Scout Quickview and CVEs
+      if: ${{ inputs.scan-docker-image }}
       uses: docker/scout-action@v1
       with:
         command: quickview,cves
@@ -129,7 +134,22 @@ jobs:
         summary: true
         only-fixed: false
           
+    - name: "Create Release with image scan report"
+      if: ${{ inputs.scan-docker-image }}
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: v${{ inputs.release-version }}
+        name: ${{ inputs.release-version }}
+        draft: false
+        prerelease: false
+        files: |
+          LICENSE
+          image-scan-report.sarif
+        body: ${{ inputs.release-content }}
+        
     - name: "Create Release"
+      if: ${{ !inputs.scan-docker-image }}
       uses: softprops/action-gh-release@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}

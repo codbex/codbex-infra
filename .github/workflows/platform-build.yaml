@@ -137,6 +137,7 @@ jobs:
           path: application/build/reports/tests
           
   scan-image:
+    if: ${{ inputs.docker-build }}
     needs: [build]
     runs-on: ubuntu-latest
 

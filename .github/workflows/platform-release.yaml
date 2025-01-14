@@ -46,8 +46,17 @@ jobs:
         path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-maven-
+
     - name: Set up JDK Corretto 21
       if: ${{ !inputs.maven-release }}
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'corretto'
+        java-version: '21'
+        architecture: x64
+        
+    - name: Set up JDK Corretto 21
+      if: ${{ inputs.maven-release }}
       uses: actions/setup-java@v4
       with:
         distribution: 'corretto'

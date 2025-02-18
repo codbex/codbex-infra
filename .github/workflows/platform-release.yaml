@@ -80,7 +80,8 @@ jobs:
       
     - name: Install TypeScript compiler
       run: npm i -g typescript
-      
+
+    # Update versions with current release version
     - name: "Configure Git"
       run: |
         git fetch
@@ -102,6 +103,7 @@ jobs:
         git add .
         git commit -m "update OTC helm version to ${{ inputs.release-version }} for release"
 
+    # Build and push release artifacts
     - name: Maven Build
       run: mvn clean install
 
@@ -121,6 +123,23 @@ jobs:
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
+    - name: OTC helm - release the chart
+      if: ${{ inputs.release-otc-helm-chart }}
+      run: |
+        cd helm/otc
+        helm lint .
+        helm package .
+
+      # Update versions with dev version
+    - name: OTC helm - set snapshot version
+      if: ${{ inputs.release-otc-helm-chart }}
+      run: |
+        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
+
+        git add .
+        git commit -m "update OTC helm version to ${{ inputs.snapshot-version }} for development"
+
     - name: Maven Set Snapshot Version
       run: |
         mvn versions:set -DnewVersion=${{ inputs.snapshot-version }}
@@ -129,22 +148,6 @@ jobs:
         git push origin main
         git checkout -b ${{ inputs.release-version }}
         git push --set-upstream origin ${{ inputs.release-version }}
-
-    - name: OTC helm - release the chart
-      if: ${{ inputs.release-otc-helm-chart }}
-      run: |
-        cd helm/otc
-        helm lint .
-        helm package .
-
-    - name: OTC helm - set snapshot version
-      if: ${{ inputs.release-otc-helm-chart }}
-      run: |
-        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
-        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
-
-        git add .
-        git commit -m "update OTC helm version to ${{ inputs.snapshot-version }} for release"
 
     # Scan docker image
     - name: Log in to Docker Hub
@@ -163,7 +166,8 @@ jobs:
         sarif-file: image-scan-report.sarif
         summary: true
         only-fixed: false
-          
+
+    # Create release
     - name: "Create Release with image scan report"
       if: ${{ inputs.scan-docker-image }}
       uses: softprops/action-gh-release@v1

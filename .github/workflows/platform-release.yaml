@@ -96,8 +96,8 @@ jobs:
     - name: OTC helm - set release version
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
-        sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" codbex-helios/helm/otc/Chart.yaml
-        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" codbex-helios/helm/otc/Chart.yaml
+        sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
 
         git add .
         git commit -m "update OTC helm version to ${{ inputs.release-version }} for release"

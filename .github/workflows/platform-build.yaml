@@ -164,8 +164,8 @@ jobs:
       - name: Docker Scout Quickview and CVEs
         uses: docker/scout-action@v1
         with:
-          registry-user: ${{ secrets.DOCKER_USERNAME }}
-          registry-password: ${{ secrets.DOCKER_PASSWORD }}
+          # registry-user: ${{ secrets.DOCKER_USERNAME }}
+          # registry-password: ${{ secrets.DOCKER_PASSWORD }}
           command: quickview,cves
           image: ghcr.io/codbex/${{ inputs.platform-name }}:latest
           sarif-file: sarif.output.json

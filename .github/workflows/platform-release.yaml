@@ -128,7 +128,7 @@ jobs:
     - name: Push OTC Helm Chart to GitHub OCI Registry
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
-        helm push /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz oci://ghcr.io/${{ github.repository_owner }}/helm/otc/${{ inputs.platform-name }}--otc
+        helm push /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz oci://ghcr.io/${{ github.repository_owner }}/helm/otc/${{ inputs.platform-name }}-otc
 
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}

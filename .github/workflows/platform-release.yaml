@@ -185,7 +185,7 @@ jobs:
         files: |
           LICENSE
           image-scan-report.sarif
-          helm/otc/${{ inputs.platform-name }}-{{ inputs.release-version }}.tgz
+          /tmp/${{ inputs.platform-name }}-{{ inputs.release-version }}.tgz
         body: ${{ inputs.release-content }}
 
     - name: "Create Release"

@@ -18,6 +18,16 @@ on:
       upload-scanned-sarif-report:
         type: boolean
         default: true
+    secrets:
+      DOCKER_USERNAME:
+        required: true
+      DOCKER_PASSWORD:
+        required: true
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_PASSWORD:
+        required: true
+
 jobs:
   code-style:
     if: ${{ inputs.code-style-checks }}

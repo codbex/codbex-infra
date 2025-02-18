@@ -134,13 +134,14 @@ jobs:
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
         cd helm/otc
+        helm lint .
         helm package .
 
     - name: OTC helm - set snapshot version
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
-        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" codbex-helios/helm/otc/Chart.yaml
-        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" codbex-helios/helm/otc/Chart.yaml
+        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
 
         git add .
         git commit -m "update OTC helm version to ${{ inputs.snapshot-version }} for release"

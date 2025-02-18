@@ -138,10 +138,9 @@ jobs:
       run: |
         sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
-        sed -i 's|tag: .*|tag: ${{ inputs.snapshot-version }}|g' helm/otc/values.yaml
 
         git add .
-        git commit -m "update OTC helm version to ${{ inputs.snapshot-version }} for development"
+        git commit -m "Update OTC helm version to ${{ inputs.snapshot-version }} for development"
 
     - name: Maven Set Snapshot Version
       run: |

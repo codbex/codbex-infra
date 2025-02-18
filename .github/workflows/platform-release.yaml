@@ -24,6 +24,9 @@ on:
       scan-docker-image:
         type: boolean
         default: true
+      release-otc-helm-chart:
+        type: boolean
+        default: false
     
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
@@ -90,6 +93,14 @@ jobs:
         mvn versions:set -DnewVersion=${{ inputs.release-version }}
         git add .
         git commit -m "version set to ${{ inputs.release-version }} for release"
+    - name: OTC helm - set release version
+      if: ${{ inputs.release-otc-helm-chart }}
+      run: |
+        sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" codbex-helios/helm/otc/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" codbex-helios/helm/otc/Chart.yaml
+
+        git add .
+        git commit -m "update OTC helm version to ${{ inputs.release-version }} for release"
 
     - name: Maven Build
       run: mvn clean install
@@ -118,7 +129,22 @@ jobs:
         git push origin main
         git checkout -b ${{ inputs.release-version }}
         git push --set-upstream origin ${{ inputs.release-version }}
-    
+
+    - name: OTC helm - release the chart
+      if: ${{ inputs.release-otc-helm-chart }}
+      run: |
+        cd helm/otc
+        helm package .
+
+    - name: OTC helm - set snapshot version
+      if: ${{ inputs.release-otc-helm-chart }}
+      run: |
+        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" codbex-helios/helm/otc/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" codbex-helios/helm/otc/Chart.yaml
+
+        git add .
+        git commit -m "update OTC helm version to ${{ inputs.snapshot-version }} for release"
+
     # Scan docker image
     - name: Log in to Docker Hub
       if: ${{ inputs.scan-docker-image }}
@@ -149,8 +175,9 @@ jobs:
         files: |
           LICENSE
           image-scan-report.sarif
+          helm/otc/helios-${{ inputs.release-version }}.tgz
         body: ${{ inputs.release-content }}
-        
+
     - name: "Create Release"
       if: ${{ !inputs.scan-docker-image }}
       uses: softprops/action-gh-release@v1
@@ -163,4 +190,5 @@ jobs:
         files: |
           LICENSE
           image-scan-report.sarif
+          helm/otc/helios-${{ inputs.release-version }}.tgz
         body: ${{ inputs.release-content }}

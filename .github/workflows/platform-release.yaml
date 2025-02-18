@@ -99,7 +99,7 @@ jobs:
       run: |
         sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
-        sed -i 's|tag: .*|tag: "${{ inputs.release-version }}"|g' helm/otc/values.yaml
+        sed -i 's|tag: .*|tag: ${{ inputs.release-version }}|g' helm/otc/values.yaml
 
         git add .
         git commit -m "update OTC helm version to ${{ inputs.release-version }} for release"
@@ -139,6 +139,7 @@ jobs:
       run: |
         sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
+        sed -i 's|tag: .*|tag: ${{ inputs.snapshot-version }}|g' helm/otc/values.yaml
 
         git add .
         git commit -m "update OTC helm version to ${{ inputs.snapshot-version }} for development"

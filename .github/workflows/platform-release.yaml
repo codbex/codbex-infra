@@ -94,11 +94,12 @@ jobs:
         mvn versions:set -DnewVersion=${{ inputs.release-version }}
         git add .
         git commit -m "version set to ${{ inputs.release-version }} for release"
-    - name: OTC helm - set release version
+    - name: OTC helm - set release version in the chart
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
         sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
         sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
+        sed -i 's|tag: .*|tag: "${{ inputs.release-version }}"|g' helm/otc/values.yaml
 
         git add .
         git commit -m "update OTC helm version to ${{ inputs.release-version }} for release"
@@ -115,6 +116,15 @@ jobs:
         
         cd application
         docker buildx build --platform linux/amd64,linux/arm64 --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} --push .
+
+    - name: OTC helm - package the chart
+      if: ${{ inputs.release-otc-helm-chart }}
+      run: |
+        cd helm/otc
+        helm lint .
+        helm package .
+        mv *.tgz /tmp/  # Stash the packaged chart
+
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}
       run: mvn deploy -P release -DskipTests
@@ -122,13 +132,6 @@ jobs:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-    - name: OTC helm - release the chart
-      if: ${{ inputs.release-otc-helm-chart }}
-      run: |
-        cd helm/otc
-        helm lint .
-        helm package .
 
       # Update versions with dev version
     - name: OTC helm - set snapshot version
@@ -197,5 +200,5 @@ jobs:
         files: |
           LICENSE
           image-scan-report.sarif
-          helm/otc/${{ inputs.platform-name }}-{{ inputs.release-version }}.tgz
+          /tmp/${{ inputs.platform-name }}-{{ inputs.release-version }}.tgz
         body: ${{ inputs.release-content }}

@@ -25,11 +25,13 @@ jobs:
     if: ${{ inputs.release-otc-helm-chart }}
     runs-on: ubuntu-latest
     steps:
-    - name: OTC Helm - lint the chart
-      run: |
-        cd ${{ github.workspace }}
-        cd helm/otc
-        helm lint .
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: OTC Helm - lint the chart
+        run: |
+          cd ${{ github.workspace }}
+          cd helm/otc
+          helm lint .
 
   code-style:
     if: ${{ inputs.code-style-checks }}

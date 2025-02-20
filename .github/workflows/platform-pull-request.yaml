@@ -15,8 +15,21 @@ on:
       code-style-checks:
         type: boolean
         default: true
+      release-otc-helm-chart:
+        type: boolean
+        default: false
 
 jobs:
+
+  otc-helm:
+    if: ${{ inputs.release-otc-helm-chart }}
+    runs-on: ubuntu-latest
+    steps:
+    - name: OTC Helm - lint the chart
+      run: |
+        cd helm/otc
+        helm lint .
+
   code-style:
     if: ${{ inputs.code-style-checks }}
     runs-on: ${{ matrix.os }}-latest

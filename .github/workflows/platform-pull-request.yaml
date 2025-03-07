@@ -148,10 +148,17 @@ jobs:
       - name: Integration tests
         run: mvn clean install -P integration-tests
         
+      - name: Generate a random artifact name
+        if: always()
+        id: generate_name
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          echo "ARTIFACT_NAME=selenide-screenshots-${TIMESTAMP}.zip" >> $GITHUB_ENV
+          
       - name: Upload selenide screenshots
-        uses: actions/upload-artifact@v4.3.1
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           retention-days: 1
-          name: selenide-screenshots
+          name: ${{ env.ARTIFACT_NAME }}
           path: application/build/reports/tests

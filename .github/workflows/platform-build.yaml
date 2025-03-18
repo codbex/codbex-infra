@@ -33,7 +33,7 @@ jobs:
       - name: OTC Helm - lint the chart
         run: |
           cd ${{ github.workspace }}
-          cd helm/otc
+          cd helm/otc/chart
           helm lint .
 
   code-style:

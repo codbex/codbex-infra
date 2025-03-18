@@ -97,9 +97,9 @@ jobs:
     - name: OTC helm - set release version in the chart
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
-        sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
-        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" helm/otc/Chart.yaml
-        sed -i 's|tag: .*|tag: ${{ inputs.release-version }}|g' helm/otc/values.yaml
+        sed -i "s/^version: .*/version: ${{ inputs.release-version }}/" helm/otc/chart/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.release-version }}/" helm/otc/chart/Chart.yaml
+        sed -i 's|tag: .*|tag: ${{ inputs.release-version }}|g' helm/otc/chart/values.yaml
 
         git add .
         git commit -m "update OTC helm version to ${{ inputs.release-version }} for release"
@@ -121,7 +121,7 @@ jobs:
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
         cd ${{ github.workspace }}
-        cd helm/otc
+        cd helm/otc/chart
         helm lint .
         helm package . --destination /tmp/ # Stash the packaged chart
         mv /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}.tgz /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz # rename the tar file
@@ -143,8 +143,8 @@ jobs:
     - name: OTC helm - set snapshot version
       if: ${{ inputs.release-otc-helm-chart }}
       run: |
-        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
-        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/Chart.yaml
+        sed -i "s/^version: .*/version: ${{ inputs.snapshot-version }}/" helm/otc/chart/Chart.yaml
+        sed -i "s/^appVersion: .*/appVersion: ${{ inputs.snapshot-version }}/" helm/otc/chart/Chart.yaml
 
         git add .
         git commit -m "Update OTC helm version to ${{ inputs.snapshot-version }} for development"

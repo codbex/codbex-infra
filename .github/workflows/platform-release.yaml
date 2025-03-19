@@ -133,7 +133,7 @@ jobs:
 
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}
-      run: mvn deploy -P release -DskipTests
+      run: mvn deploy -P release -DskipTests -DstagingProgressTimeoutMinutes=10
       env:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
         MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}

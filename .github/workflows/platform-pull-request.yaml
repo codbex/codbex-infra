@@ -101,7 +101,7 @@ jobs:
         docker buildx create --name codbex-builder
         docker buildx use codbex-builder
         cd application
-        docker buildx build --tag ${{ inputs.platform-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+        docker buildx build --tag ${{ inputs.platform-name }} --no-cache -o type=image --platform=linux/arm64,linux/amd64 .
 
   integration-tests:
     if: ${{ inputs.integration-tests }}

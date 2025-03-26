@@ -169,7 +169,7 @@ jobs:
         with:
           retention-days: 1
           name: ${{ env.ARTIFACT_NAME }}
-          path: application/build/reports/tests
+          path: integration-tests/build/reports/tests
           
   scan-image:
     if: ${{ inputs.docker-build }}

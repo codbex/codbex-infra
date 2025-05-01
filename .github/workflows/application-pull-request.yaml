@@ -1,45 +1,62 @@
 name: Application - Pull Request
 
 on:
-  workflow_call:
-    inputs:
-      application-name:
-        required: true
-        type: string
-      install-dependencies:
-        type: boolean
-        default: false
-      dockerfile-location:
-        type: string
-        default:  ./
+    workflow_call:
+        inputs:
+            application-name:
+                required: true
+                type: string
+            install-dependencies:
+                type: boolean
+                default: false
+            dockerfile-location:
+                type: string
+                default: ./
+            run-tests:
+                type: boolean
+                default: false
 
 jobs:
-  pull-request:
-    runs-on: ubuntu-latest
+    pull-request:
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        steps:
+            - uses: actions/checkout@v3
+              with:
+                  fetch-depth: 0
 
-      - name: Install NodeJS
-        if: ${{ inputs.install-dependencies }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
+            - name: Install NodeJS
+              if: ${{ inputs.install-dependencies }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 18
 
-      - name: Install Dependencies
-        if: ${{ inputs.install-dependencies }}
-        run: |
-          cd ${{ inputs.dockerfile-location }}
-          echo "@codbex:registry=https://npm.pkg.github.com
-          //npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
-          npm install
-          rm -rf .npmrc
+            - name: Install Dependencies
+              if: ${{ inputs.install-dependencies }}
+              run: |
+                  cd ${{ inputs.dockerfile-location }}
+                  echo "@codbex:registry=https://npm.pkg.github.com
+                  //npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
+                  npm install
+                  rm -rf .npmrc
 
-      - name: Build Docker Image
-        run: |
-          cd ${{ inputs.dockerfile-location }}
-          docker buildx create --name codbex-builder
-          docker buildx use codbex-builder
-          docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+            - name: Build Docker Image
+              run: |
+                  cd ${{ inputs.dockerfile-location }}
+                  docker buildx create --name codbex-builder
+                  docker buildx use codbex-builder
+                  docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+
+            - name: Run Integration Tests (Optional)
+              if: ${{ inputs.run-tests }}
+              run: |
+                  export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+                  export PATH=$JAVA_HOME/bin:$PATH
+
+                  echo "APP_IMAGE=${{ inputs.application-name }}:test" >> $GITHUB_ENV
+                  echo "SAMPLE_DATA_IMAGE=codbex-athena-data-sample:test" >> $GITHUB_ENV
+
+                  docker build -t codbex-athena:test application/
+                  docker build -t codbex-athena-data-sample:test application-data-sample/
+
+                  mvn clean install -P integration-tests

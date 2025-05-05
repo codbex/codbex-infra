@@ -1,4 +1,4 @@
-name: Application – Pull Request
+name: Application - Pull Request
 
 on:
   workflow_call:

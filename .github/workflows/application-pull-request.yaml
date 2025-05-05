@@ -27,7 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app-image: ${{ steps.set-app-image.outputs.image }}
-      app-image-tar: ${{ steps.save-app-image.outputs.path }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -59,21 +58,12 @@ jobs:
           echo "image=$APP_IMAGE" >> $GITHUB_OUTPUT
         id: set-app-image
 
-      - name: Save Application Image
-        run: |
-          mkdir -p /tmp/docker-images
-          APP_IMAGE="${{ steps.set-app-image.outputs.image }}"
-          IMAGE_TAR="/tmp/docker-images/app-image.tar"
-          docker save -o $IMAGE_TAR $APP_IMAGE
-          echo "path=$IMAGE_TAR" >> $GITHUB_OUTPUT
-        id: save-app-image
-
   build-sample-data:
     if: ${{ inputs.build-sample-data }}
     runs-on: ubuntu-latest
+    needs: build-app
     outputs:
       sample-image: ${{ steps.set-sample-image.outputs.image }}
-      sample-image-tar: ${{ steps.save-sample-image.outputs.path }}
     steps:
       - uses: actions/checkout@v3
 
@@ -97,32 +87,12 @@ jobs:
           echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
         id: set-sample-image
 
-      - name: Save Sample Data Image
-        run: |
-          mkdir -p /tmp/docker-images
-          SAMPLE_IMAGE="${{ steps.set-sample-image.outputs.image }}"
-          IMAGE_TAR="/tmp/docker-images/sample-data-image.tar"
-          docker save -o $IMAGE_TAR $SAMPLE_IMAGE
-          echo "path=$IMAGE_TAR" >> $GITHUB_OUTPUT
-        id: save-sample-image
-
   integration-tests:
     if: ${{ inputs.run-tests }}
-    needs:
-      - build-app
-      - build-sample-data
+    needs: [build-app, build-sample-data]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Load Docker Images
-        run: |
-          mkdir -p /tmp/docker-images
-          echo "Loading application image..."
-          docker load -i ${{ needs.build-app.outputs.app-image-tar }}
-          echo "Loading sample data image..."
-          docker load -i ${{ needs.build-sample-data.outputs.sample-image-tar }}
-          docker images
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -139,5 +109,7 @@ jobs:
           APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
           SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
         run: |
+          docker inspect $APP_IMAGE || docker pull $APP_IMAGE
+          docker inspect $SAMPLE_DATA_IMAGE || docker pull $SAMPLE_DATA_IMAGE
           export MAVEN_OPTS="-Dapp.image=$APP_IMAGE -Dsample.data.image=$SAMPLE_DATA_IMAGE"
           mvn clean install -P integration-tests

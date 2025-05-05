@@ -55,6 +55,7 @@ jobs:
         if: ${{ inputs.build-sample-data }}
         run: |
           cd ${{ inputs.sample-data-folder }}
+          npm install
           docker build -t ${{ inputs.application-name }}-data-sample:test .
 
       # Integration tests

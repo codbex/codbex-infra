@@ -1,11 +1,11 @@
-name: Application - Pull Request
+name: Application – Pull Request
 
 on:
   workflow_call:
     inputs:
       application-name:
-        required: true
         type: string
+        required: true
       install-dependencies:
         type: boolean
         default: false
@@ -15,77 +15,69 @@ on:
       run-tests:
         type: boolean
         default: false
-      sample-data-folder:
-        type: string
-        default: ./application-data-sample/
+    secrets: inherit
 
 jobs:
-  build-app:
+  build:
     runs-on: ubuntu-latest
     outputs:
-      app-image: ${{ steps.export.outputs.app-image }}
+      image: ${{ steps.export.outputs.image }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Install NodeJS
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Install Node.js (if needed)
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install Dependencies
+      - name: Install npm dependencies
         if: ${{ inputs.install-dependencies }}
         run: |
           cd ${{ inputs.dockerfile-location }}
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-          npm install
-          rm -rf .npmrc
+          npm ci
+          rm .npmrc
 
-      - name: Build Docker Image
+      - name: Build multi-platform Docker image
         run: |
-          IMAGE_NAME=${{ inputs.application-name }}:test
+          IMAGE=${{ inputs.application-name }}:test
           cd ${{ inputs.dockerfile-location }}
-          docker buildx create --name codbex-builder || true
-          docker buildx use codbex-builder
-          docker buildx build --tag $IMAGE_NAME -o type=docker --platform=linux/arm64,linux/amd64 .
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag $IMAGE \
+            --load .
 
-      - name: Export Output
+      - name: Export image name
         id: export
-        run: echo "app-image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
-
-  build-sample-data:
-    if: ${{ inputs.run-tests }}
-    runs-on: ubuntu-latest
-    outputs:
-      sample-image: ${{ steps.export.outputs.sample-image }}
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build Sample Data Image
-        run: |
-          SAMPLE_IMAGE=codbex-${{ inputs.application-name }}-data-sample:test
-          docker build -t $SAMPLE_IMAGE ${{ inputs.sample-data-folder }}
-
-      - name: Export Output
-        id: export
-        run: echo "sample-image=codbex-${{ inputs.application-name }}-data-sample:test" >> $GITHUB_OUTPUT
+        run: echo "image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
 
   integration-tests:
     if: ${{ inputs.run-tests }}
-    needs: [build-app, build-sample-data]
+    needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Set Image Tags
-        run: |
-          echo "APP_IMAGE=${{ needs.build-app.outputs.app-image }}" >> $GITHUB_ENV
-          echo "SAMPLE_DATA_IMAGE=${{ needs.build-sample-data.outputs.sample-image }}" >> $GITHUB_ENV
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Run Integration Tests
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
-          mvn clean install -P integration-tests
+      - name: Set image ENV
+        run: echo "IMAGE=${{ needs.build.outputs.image }}" >> $GITHUB_ENV
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Run integration tests
+        run: mvn clean install -P integration-tests

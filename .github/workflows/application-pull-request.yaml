@@ -26,11 +26,9 @@ jobs:
   build-app:
     runs-on: ubuntu-latest
     outputs:
-      app-image: ${{ steps.set-app-image.outputs.image }}
+      app-image: ${{ steps.build-app.outputs.image }}
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
@@ -45,30 +43,32 @@ jobs:
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
           npm install
-          ls -la node_modules || echo "node_modules not found"
-          ls -la node_modules/@codbex || echo "@codbex packages not found"
           rm -rf .npmrc
 
       - name: Build Application Image
+        id: build-app
         run: |
           cd ${{ inputs.dockerfile-location }}
           APP_IMAGE="${{ inputs.application-name }}:test"
           docker build -t $APP_IMAGE .
           echo "image=$APP_IMAGE" >> $GITHUB_OUTPUT
-        id: set-app-image
+          
+          # Save image to artifact
+          mkdir -p docker-images
+          docker save -o docker-images/app-image.tar $APP_IMAGE
 
-      - name: Save Docker Image
-        run: |
-          mkdir -p /tmp/docker-images
-          docker save -o /tmp/docker-images/app-image.tar ${{ steps.set-app-image.outputs.image }}
-          echo "Docker image saved"
+      - name: Upload Application Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-image
+          path: docker-images/app-image.tar
 
   build-sample-data:
     if: ${{ inputs.build-sample-data }}
     runs-on: ubuntu-latest
     needs: build-app
     outputs:
-      sample-image: ${{ steps.set-sample-image.outputs.image }}
+      sample-image: ${{ steps.build-sample-data.outputs.image }}
     steps:
       - uses: actions/checkout@v3
 
@@ -79,24 +79,26 @@ jobs:
             echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
             npm install
-            ls -la node_modules || exit 1
             rm -rf .npmrc
           fi
-          ls -la || echo "Directory contents:"
 
       - name: Build Sample Data Image
+        id: build-sample-data
         run: |
           cd ${{ inputs.sample-data-folder }}
           SAMPLE_IMAGE="${{ inputs.application-name }}-data-sample:test"
           docker build -t $SAMPLE_IMAGE .
           echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
-        id: set-sample-image
+          
+          # Save image to artifact
+          mkdir -p docker-images
+          docker save -o docker-images/sample-image.tar $SAMPLE_IMAGE
 
-      - name: Save Docker Image
-        run: |
-          mkdir -p /tmp/docker-images
-          docker save -o /tmp/docker-images/sample-image.tar ${{ steps.set-sample-image.outputs.image }}
-          echo "Docker image saved"
+      - name: Upload Sample Data Image
+        uses: actions/upload-artifact@v3
+        with:
+          name: sample-image
+          path: docker-images/sample-image.tar
 
   integration-tests:
     if: ${{ inputs.run-tests }}
@@ -104,6 +106,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Download Images
+        uses: actions/download-artifact@v3
+        with:
+          path: docker-images
+
+      - name: Load Docker Images
+        run: |
+          docker load -i docker-images/app-image.tar
+          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
+            docker load -i docker-images/sample-image.tar
+          fi
+          docker images
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -113,21 +129,19 @@ jobs:
       - name: Configure Testcontainers
         run: |
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
+          echo "DOCKER_HOST=" >> $GITHUB_ENV
 
       - name: Run Integration Tests
         env:
           APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
           SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
         run: |
-          # Verify images exist
-          docker inspect $APP_IMAGE || (echo "Application image not found" && exit 1)
+          # Verify images are present
+          docker inspect $APP_IMAGE || exit 1
           if [ "${{ inputs.build-sample-data }}" = "true" ]; then
-            docker inspect $SAMPLE_DATA_IMAGE || (echo "Sample data image not found" && exit 1)
+            docker inspect $SAMPLE_DATA_IMAGE || exit 1
           fi
           
-          # Run tests
-          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE"
-          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
-            export MAVEN_OPTS="$MAVEN_OPTS -Dsample.data.image=$SAMPLE_DATA_IMAGE"
-          fi
+          # Run tests with local images
+          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE -Dsample.data.image=$SAMPLE_DATA_IMAGE"
           mvn clean install -P integration-tests

@@ -1,63 +1,87 @@
 name: Application - Build
 
 on:
-    workflow_call:
-        inputs:
-            application-name:
-                required: true
-                type: string
-            install-dependencies:
-                type: boolean
-                default: false
-            dockerfile-location:
-                type: string
-                default: ./
-            run-tests:
-                type: boolean
-                default: false
+  workflow_call:
+    inputs:
+      application-name:
+        required: true
+        type: string
+      install-dependencies:
+        type: boolean
+        default: false
+      dockerfile-location:
+        type: string
+        default: ./
+      run-tests:
+        type: boolean
+        default: false
+      sample-data-folder:
+        type: string
+        default: ./application-data-sample/
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build-app:
+    runs-on: ubuntu-latest
+    outputs:
+      app-image: ${{ steps.export.outputs.app-image }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install NodeJS
+        if: ${{ inputs.install-dependencies }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-        steps:
-            - uses: actions/checkout@v3
-              with:
-                  fetch-depth: 0
+      - name: Install Dependencies
+        if: ${{ inputs.install-dependencies }}
+        run: |
+          cd ${{ inputs.dockerfile-location }}
+          echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+          npm install
+          rm -rf .npmrc
 
-            - name: Install NodeJS
-              if: ${{ inputs.install-dependencies }}
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 18
+      - name: Build and Push Application Image
+        run: |
+          IMAGE_NAME=ghcr.io/codbex/${{ inputs.application-name }}:latest
+          cd ${{ inputs.dockerfile-location }}
+          docker buildx create --name codbex-builder --use || true
+          docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker buildx build --push --tag $IMAGE_NAME --platform=linux/arm64,linux/amd64 .
 
-            - name: Install Dependencies
-              if: ${{ inputs.install-dependencies }}
-              run: |
-                  cd ${{ inputs.dockerfile-location }}
-                  echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-                  echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-                  npm install
-                  rm -rf .npmrc
+      - name: Export Output
+        id: export
+        run: echo "app-image=ghcr.io/codbex/${{ inputs.application-name }}:latest" >> $GITHUB_OUTPUT
 
-            - name: Build and Push Docker Image
-              run: |
-                  cd ${{ inputs.dockerfile-location }}
-                  docker buildx create --name codbex-builder --use || true
-                  docker buildx build --tag ${{ inputs.application-name }} --platform=linux/arm64,linux/amd64 .
-                  docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-                  docker buildx build --push --tag ghcr.io/codbex/${{ inputs.application-name }}:latest --platform=linux/arm64,linux/amd64 .
+  build-sample-data:
+    if: ${{ inputs.run-tests }}
+    runs-on: ubuntu-latest
+    outputs:
+      sample-image: ${{ steps.export.outputs.sample-image }}
+    steps:
+      - uses: actions/checkout@v3
 
-            - name: Run Integration Tests (Optional)
-              if: ${{ inputs.run-tests }}
-              run: |
-                  export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-                  export PATH=$JAVA_HOME/bin:$PATH
+      - name: Build Sample Data Image
+        run: |
+          SAMPLE_IMAGE=ghcr.io/codbex/${{ inputs.application-name }}-data-sample:test
+          docker build -t $SAMPLE_IMAGE ${{ inputs.sample-data-folder }}
 
-                  echo "APP_IMAGE=${{ inputs.application-name }}:test" >> $GITHUB_ENV
-                  echo "SAMPLE_DATA_IMAGE=codbex-athena-data-sample:test" >> $GITHUB_ENV
+      - name: Export Output
+        id: export
+        run: echo "sample-image=ghcr.io/codbex/${{ inputs.application-name }}-data-sample:test" >> $GITHUB_OUTPUT
 
-                  docker build -t codbex-athena:test application/
-                  docker build -t codbex-athena-data-sample:test application-data-sample/
+  integration-tests:
+    if: ${{ inputs.run-tests }}
+    needs: [build-app, build-sample-data]
+    runs-on: ubuntu-latest
 
-                  mvn clean install -P integration-tests
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set Image Tags
+        run: |
+          echo "APP_IMAGE=${{ needs.build-app.outputs.app-image }}" >> $GITHUB_ENV
+          echo "SAMPLE_DATA_IMAGE=${{ needs.build-sample-data.outputs.sample-image }}" >> $GITHUB_ENV
+
+      - name: Run Integration Tests
+        run: mvn clean install -P integration-tests

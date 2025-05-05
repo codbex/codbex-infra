@@ -19,11 +19,14 @@ on:
         type: string
         default: ./application-data-sample/
 
+    secrets: inherit
+
 jobs:
   build-app:
     runs-on: ubuntu-latest
     outputs:
       app-image: ${{ steps.export.outputs.app-image }}
+
     steps:
       - uses: actions/checkout@v3
         with:
@@ -40,9 +43,9 @@ jobs:
         run: |
           cd ${{ inputs.dockerfile-location }}
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-          npm install
-          rm -rf .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          npm ci
+          rm -f .npmrc
 
       - name: Build Docker Image
         run: |
@@ -50,7 +53,8 @@ jobs:
           cd ${{ inputs.dockerfile-location }}
           docker buildx create --name codbex-builder || true
           docker buildx use codbex-builder
-          docker buildx build --tag $IMAGE_NAME -o type=docker --platform=linux/arm64,linux/amd64 .
+          docker buildx inspect --bootstrap
+          docker buildx build --tag $IMAGE_NAME --load .
 
       - name: Export Output
         id: export
@@ -64,6 +68,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - name: Build Sample Data Image
         run: |
           SAMPLE_IMAGE=codbex-${{ inputs.application-name }}-data-sample:test
@@ -77,15 +82,21 @@ jobs:
     if: ${{ inputs.run-tests }}
     needs: [build-app, build-sample-data]
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v3
-      - name: Set Image Tags
+
+      - name: Set Environment Variables
         run: |
           echo "APP_IMAGE=${{ needs.build-app.outputs.app-image }}" >> $GITHUB_ENV
           echo "SAMPLE_DATA_IMAGE=${{ needs.build-sample-data.outputs.sample-image }}" >> $GITHUB_ENV
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
       - name: Run Integration Tests
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
           mvn clean install -P integration-tests

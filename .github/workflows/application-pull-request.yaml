@@ -15,15 +15,15 @@ on:
       run-tests:
         type: boolean
         default: false
-
-    secrets: inherit
+      sample-data-folder:
+        type: string
+        default: ./application-data-sample/
 
 jobs:
   build-app:
     runs-on: ubuntu-latest
     outputs:
       app-image: ${{ steps.export.outputs.app-image }}
-
     steps:
       - uses: actions/checkout@v3
         with:
@@ -50,32 +50,42 @@ jobs:
           cd ${{ inputs.dockerfile-location }}
           docker buildx create --name codbex-builder || true
           docker buildx use codbex-builder
-          docker buildx inspect --bootstrap
-          docker buildx build --tag $IMAGE_NAME --load .
+          docker buildx build --tag $IMAGE_NAME -o type=docker --platform=linux/arm64,linux/amd64 .
 
       - name: Export Output
         id: export
         run: echo "app-image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
 
-  integration-tests:
+  build-sample-data:
     if: ${{ inputs.run-tests }}
-    needs: [build-app]
     runs-on: ubuntu-latest
+    outputs:
+      sample-image: ${{ steps.export.outputs.sample-image }}
 
     steps:
       - uses: actions/checkout@v3
+      - name: Build Sample Data Image
+        run: |
+          SAMPLE_IMAGE=codbex-${{ inputs.application-name }}-data-sample:test
+          docker build -t $SAMPLE_IMAGE ${{ inputs.sample-data-folder }}
 
-      - name: Set Environment Variables
+      - name: Export Output
+        id: export
+        run: echo "sample-image=codbex-${{ inputs.application-name }}-data-sample:test" >> $GITHUB_OUTPUT
+
+  integration-tests:
+    if: ${{ inputs.run-tests }}
+    needs: [build-app, build-sample-data]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set Image Tags
         run: |
           echo "APP_IMAGE=${{ needs.build-app.outputs.app-image }}" >> $GITHUB_ENV
-          # Removed SAMPLE_DATA_IMAGE setting
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
+          echo "SAMPLE_DATA_IMAGE=${{ needs.build-sample-data.outputs.sample-image }}" >> $GITHUB_ENV
 
       - name: Run Integration Tests
         run: |
+          export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
           mvn clean install -P integration-tests

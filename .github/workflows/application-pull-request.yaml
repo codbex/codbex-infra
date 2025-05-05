@@ -108,6 +108,6 @@ jobs:
           APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
           SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
+#          export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+#          export PATH=$JAVA_HOME/bin:$PATH
           mvn clean install -P integration-tests

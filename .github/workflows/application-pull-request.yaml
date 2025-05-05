@@ -53,6 +53,8 @@ jobs:
       - name: Build Application Image
         run: |
           cd ${{ inputs.dockerfile-location }}
+          # Verify files exist before building
+          ls -la node_modules/@codbex || exit 1
           docker build -t ${{ inputs.application-name }}:test .
           echo "image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
         id: set-app-image
@@ -64,6 +66,19 @@ jobs:
       sample-image: ${{ steps.set-sample-image.outputs.image }}
     steps:
       - uses: actions/checkout@v3
+
+      - name: Prepare Sample Data Directory
+        run: |
+          cd ${{ inputs.sample-data-folder }}
+          # Install dependencies if package.json exists
+          if [ -f package.json ]; then
+            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+            npm install
+            ls -la node_modules || exit 1
+            rm -rf .npmrc
+          fi
+          ls -la || echo "Directory contents:"
 
       - name: Build Sample Data Image
         run: |

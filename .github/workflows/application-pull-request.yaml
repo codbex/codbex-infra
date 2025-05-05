@@ -27,6 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app-image: ${{ steps.set-app-image.outputs.image }}
+      app-image-tar: ${{ steps.save-app-image.outputs.path }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -45,7 +46,6 @@ jobs:
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
           npm install
-          # Verify node_modules exists
           ls -la node_modules || echo "node_modules not found"
           ls -la node_modules/@codbex || echo "@codbex packages not found"
           rm -rf .npmrc
@@ -53,24 +53,33 @@ jobs:
       - name: Build Application Image
         run: |
           cd ${{ inputs.dockerfile-location }}
-          # Verify files exist before building
           ls -la node_modules/@codbex || exit 1
-          docker build -t ${{ inputs.application-name }}:test .
-          echo "image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
+          APP_IMAGE="${{ inputs.application-name }}:test"
+          docker build -t $APP_IMAGE .
+          echo "image=$APP_IMAGE" >> $GITHUB_OUTPUT
         id: set-app-image
+
+      - name: Save Application Image
+        run: |
+          mkdir -p /tmp/docker-images
+          APP_IMAGE="${{ steps.set-app-image.outputs.image }}"
+          IMAGE_TAR="/tmp/docker-images/app-image.tar"
+          docker save -o $IMAGE_TAR $APP_IMAGE
+          echo "path=$IMAGE_TAR" >> $GITHUB_OUTPUT
+        id: save-app-image
 
   build-sample-data:
     if: ${{ inputs.build-sample-data }}
     runs-on: ubuntu-latest
     outputs:
       sample-image: ${{ steps.set-sample-image.outputs.image }}
+      sample-image-tar: ${{ steps.save-sample-image.outputs.path }}
     steps:
       - uses: actions/checkout@v3
 
       - name: Prepare Sample Data Directory
         run: |
           cd ${{ inputs.sample-data-folder }}
-          # Install dependencies if package.json exists
           if [ -f package.json ]; then
             echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
             echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
@@ -83,15 +92,19 @@ jobs:
       - name: Build Sample Data Image
         run: |
           cd ${{ inputs.sample-data-folder }}
-          SAMPLE_IMAGE=codbex-athena-data-sample:test
+          SAMPLE_IMAGE="${{ inputs.application-name }}-data-sample:test"
           docker build -t $SAMPLE_IMAGE .
           echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
         id: set-sample-image
 
-      - name: Save Docker Image
+      - name: Save Sample Data Image
         run: |
-          docker save -o /tmp/sample-data-image.tar codbex-athena-data-sample:test
-          echo "IMAGE_TAR=/tmp/sample-data-image.tar" >> $GITHUB_ENV
+          mkdir -p /tmp/docker-images
+          SAMPLE_IMAGE="${{ steps.set-sample-image.outputs.image }}"
+          IMAGE_TAR="/tmp/docker-images/sample-data-image.tar"
+          docker save -o $IMAGE_TAR $SAMPLE_IMAGE
+          echo "path=$IMAGE_TAR" >> $GITHUB_OUTPUT
+        id: save-sample-image
 
   integration-tests:
     if: ${{ inputs.run-tests }}
@@ -104,7 +117,11 @@ jobs:
 
       - name: Load Docker Images
         run: |
-          docker load -i /tmp/sample-data-image.tar
+          mkdir -p /tmp/docker-images
+          echo "Loading application image..."
+          docker load -i ${{ needs.build-app.outputs.app-image-tar }}
+          echo "Loading sample data image..."
+          docker load -i ${{ needs.build-sample-data.outputs.sample-image-tar }}
           docker images
 
       - name: Set up Java

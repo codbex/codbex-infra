@@ -4,8 +4,8 @@ on:
   workflow_call:
     inputs:
       application-name:
-        type: string
         required: true
+        type: string
       install-dependencies:
         type: boolean
         default: false
@@ -15,52 +15,46 @@ on:
       run-tests:
         type: boolean
         default: false
-    secrets: inherit
+      sample-data-folder:
+        type: string
+        default: ./application-data-sample/
 
 jobs:
-  build:
+  build-app:
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ steps.export.outputs.image }}
+      app-image: ${{ steps.export.outputs.app-image }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Install Node.js (if needed)
+      - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install npm dependencies
+      - name: Install Dependencies
         if: ${{ inputs.install-dependencies }}
         run: |
           cd ${{ inputs.dockerfile-location }}
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
           npm ci
-          rm .npmrc
+          rm -rf .npmrc
 
-      - name: Build multi-platform Docker image
+      - name: Build Docker Image
         run: |
-          IMAGE=${{ inputs.application-name }}:test
+          IMAGE_NAME=${{ inputs.application-name }}:test
           cd ${{ inputs.dockerfile-location }}
-          docker buildx build \
-            --platform linux/amd64,linux/arm64 \
-            --tag $IMAGE \
-            --load .
+          docker buildx create --name codbex-builder || true
+          docker buildx use codbex-builder
+          docker buildx build --tag $IMAGE_NAME -o type=docker --platform=linux/arm64,linux/amd64 .
 
-      - name: Export image name
+      - name: Export Output
         id: export
-        run: echo "image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
+        run: echo "app-image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
 
   integration-tests:
     if: ${{ inputs.run-tests }}

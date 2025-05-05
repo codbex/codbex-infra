@@ -23,8 +23,10 @@ on:
         default: false
 
 jobs:
-  build-and-test:
+  build-app:
     runs-on: ubuntu-latest
+    outputs:
+      app-image: ${{ steps.set-app-image.outputs.image }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -43,7 +45,7 @@ jobs:
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
           npm install
-          # Verify node_modules exists before Docker build
+          # Verify node_modules exists
           ls -la node_modules || echo "node_modules not found"
           ls -la node_modules/@codbex || echo "@codbex packages not found"
           rm -rf .npmrc
@@ -51,21 +53,60 @@ jobs:
       - name: Build Application Image
         run: |
           cd ${{ inputs.dockerfile-location }}
-          # Build for current platform only (avoids manifest list error)
           docker buildx build \
             --tag ${{ inputs.application-name }}:test \
             --load .
-          echo "APP_IMAGE=${{ inputs.application-name }}:test" >> $GITHUB_ENV
+          echo "image=${{ inputs.application-name }}:test" >> $GITHUB_OUTPUT
+        id: set-app-image
+
+  build-sample-data:
+    if: ${{ inputs.run-tests && inputs.build-sample-data }}
+    runs-on: ubuntu-latest
+    outputs:
+      sample-image: ${{ steps.set-sample-image.outputs.image }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Verify Sample Data Directory
+        run: |
+          ls -la ${{ inputs.sample-data-folder }} || echo "Sample data folder not found"
 
       - name: Build Sample Data Image
-        if: ${{ inputs.run-tests && inputs.build-sample-data }}
         run: |
+          cd ${{ inputs.sample-data-folder }}
+          # First install dependencies if needed
+          if [ -f package.json ]; then
+            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+            npm install
+            ls -la node_modules || echo "node_modules not found"
+            rm -rf .npmrc
+          fi
+          
           SAMPLE_IMAGE=codbex-${{ inputs.application-name }}-data-sample:test
-          docker build -t $SAMPLE_IMAGE ${{ inputs.sample-data-folder }}
-          echo "SAMPLE_DATA_IMAGE=$SAMPLE_IMAGE" >> $GITHUB_ENV
+          docker build -t $SAMPLE_IMAGE .
+          echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
+        id: set-sample-image
+
+  integration-tests:
+    if: ${{ inputs.run-tests }}
+    needs:
+      - build-app
+      - build-sample-data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
 
       - name: Run Integration Tests
-        if: ${{ inputs.run-tests }}
+        env:
+          APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
+          SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH

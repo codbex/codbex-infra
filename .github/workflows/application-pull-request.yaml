@@ -41,7 +41,7 @@ jobs:
           cd ${{ inputs.dockerfile-location }}
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-          npm ci
+          npm install
           rm -rf .npmrc
 
       - name: Build Docker Image

@@ -41,7 +41,7 @@ jobs:
           cd ${{ inputs.dockerfile-location }}
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-          npm install
+          npm ci
           rm -rf .npmrc
 
       - name: Build Docker Image
@@ -61,7 +61,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sample-image: ${{ steps.export.outputs.sample-image }}
-
     steps:
       - uses: actions/checkout@v3
       - name: Build Sample Data Image
@@ -83,6 +82,12 @@ jobs:
         run: |
           echo "APP_IMAGE=${{ needs.build-app.outputs.app-image }}" >> $GITHUB_ENV
           echo "SAMPLE_DATA_IMAGE=${{ needs.build-sample-data.outputs.sample-image }}" >> $GITHUB_ENV
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
 
       - name: Run Integration Tests
         run: |

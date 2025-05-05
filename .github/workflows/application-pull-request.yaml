@@ -83,7 +83,7 @@ jobs:
       - name: Build Sample Data Image
         run: |
           cd ${{ inputs.sample-data-folder }}
-          SAMPLE_IMAGE=codbex-${{ inputs.application-name }}-data-sample:test
+          SAMPLE_IMAGE=${{ inputs.application-name }}-data-sample:test
           docker build -t $SAMPLE_IMAGE .
           echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
         id: set-sample-image

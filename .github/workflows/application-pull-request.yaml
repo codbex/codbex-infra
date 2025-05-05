@@ -73,28 +73,28 @@ jobs:
           echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
         id: set-sample-image
 
-    integration-tests:
-      if: ${{ inputs.run-tests }}
-      needs:
-        - build-app
-        - build-sample-data
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v3
+  integration-tests:
+    if: ${{ inputs.run-tests }}
+    needs:
+      - build-app
+      - build-sample-data
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
-        - name: Set up Java
-          uses: actions/setup-java@v4
-          with:
-            distribution: temurin
-            java-version: 21
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
 
-        - name: List Docker images (debug)
-          run: docker images
+      - name: List Docker images (debug)
+        run: docker images
 
-        - name: Run Integration Tests
-          env:
-            APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
-            SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
-          run: |
-            export MAVEN_OPTS="-Dapp.image=$APP_IMAGE -Dsample.data.image=$SAMPLE_DATA_IMAGE"
-            mvn clean install -P integration-tests
+      - name: Run Integration Tests
+        env:
+          APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
+          SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
+        run: |
+          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE -Dsample.data.image=$SAMPLE_DATA_IMAGE"
+          mvn clean install -P integration-tests

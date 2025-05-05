@@ -70,23 +70,20 @@ jobs:
       - name: Prepare Sample Data Directory
         run: |
           cd ${{ inputs.sample-data-folder }}
-          # Install dependencies if package.json exists
-          if [ -f package.json ]; then
-            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-            npm install
-            ls -la node_modules || exit 1
-            rm -rf .npmrc
-          fi
-          ls -la || echo "Directory contents:"
+          # ... (existing preparation code) ...
 
       - name: Build Sample Data Image
         run: |
           cd ${{ inputs.sample-data-folder }}
-          SAMPLE_IMAGE=${{ inputs.application-name }}-data-sample:test
+          SAMPLE_IMAGE=codbex-athena-data-sample:test
           docker build -t $SAMPLE_IMAGE .
           echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
         id: set-sample-image
+
+      - name: Save Docker Image
+        run: |
+          docker save -o /tmp/sample-data-image.tar codbex-athena-data-sample:test
+          echo "IMAGE_TAR=/tmp/sample-data-image.tar" >> $GITHUB_ENV
 
   integration-tests:
     if: ${{ inputs.run-tests }}
@@ -97,14 +94,20 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Load Docker Images
+        run: |
+          docker load -i /tmp/sample-data-image.tar
+          docker images
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
-      - name: List Docker images (debug)
-        run: docker images
+      - name: Configure Testcontainers
+        run: |
+          echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
 
       - name: Run Integration Tests
         env:

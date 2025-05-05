@@ -104,18 +104,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - name: Download and Load Docker Images
-        run: |
-          mkdir -p /tmp/docker-images
-          # Load application image
-          docker load -i /tmp/docker-images/app-image.tar
-          # Load sample data image if built
-          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
-            docker load -i /tmp/docker-images/sample-image.tar
-          fi
-          docker images
-
       - name: Set up Java
         uses: actions/setup-java@v4
         with:

@@ -70,7 +70,15 @@ jobs:
       - name: Prepare Sample Data Directory
         run: |
           cd ${{ inputs.sample-data-folder }}
-          # ... (existing preparation code) ...
+          # Install dependencies if package.json exists
+          if [ -f package.json ]; then
+            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+            npm install
+            ls -la node_modules || exit 1
+            rm -rf .npmrc
+          fi
+          ls -la || echo "Directory contents:"
 
       - name: Build Sample Data Image
         run: |

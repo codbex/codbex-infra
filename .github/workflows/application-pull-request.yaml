@@ -23,15 +23,14 @@ on:
         default: false
 
 jobs:
-  build-app:
+  build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      app-image: ${{ steps.set-app-image.outputs.image }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
+      # Build application
       - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
@@ -52,64 +51,33 @@ jobs:
       - name: Build Application Image
         run: |
           cd ${{ inputs.dockerfile-location }}
-          ls -la node_modules/@codbex || exit 1
           APP_IMAGE="${{ inputs.application-name }}:test"
           docker build -t $APP_IMAGE .
-          echo "image=$APP_IMAGE" >> $GITHUB_OUTPUT
-        id: set-app-image
+          echo "APP_IMAGE=$APP_IMAGE" >> $GITHUB_ENV
 
-  build-sample-data:
-    if: ${{ inputs.build-sample-data }}
-    runs-on: ubuntu-latest
-    needs: build-app
-    outputs:
-      sample-image: ${{ steps.set-sample-image.outputs.image }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Prepare Sample Data Directory
-        run: |
-          cd ${{ inputs.sample-data-folder }}
-          if [ -f package.json ]; then
-            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-            npm install
-            ls -la node_modules || exit 1
-            rm -rf .npmrc
-          fi
-          ls -la || echo "Directory contents:"
-
+      # Build sample data (if enabled)
       - name: Build Sample Data Image
+        if: ${{ inputs.build-sample-data }}
         run: |
           cd ${{ inputs.sample-data-folder }}
           SAMPLE_IMAGE="${{ inputs.application-name }}-data-sample:test"
           docker build -t $SAMPLE_IMAGE .
-          echo "image=$SAMPLE_IMAGE" >> $GITHUB_OUTPUT
-        id: set-sample-image
+          echo "SAMPLE_IMAGE=$SAMPLE_IMAGE" >> $GITHUB_ENV
 
-  integration-tests:
-    if: ${{ inputs.run-tests }}
-    needs: [build-app, build-sample-data]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Configure Testcontainers
-        run: |
-          echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
-
+      # Run tests (if enabled)
       - name: Run Integration Tests
-        env:
-          APP_IMAGE: ${{ needs.build-app.outputs.app-image }}
-          SAMPLE_DATA_IMAGE: ${{ needs.build-sample-data.outputs.sample-image }}
+        if: ${{ inputs.run-tests }}
         run: |
-          docker inspect $APP_IMAGE || docker pull $APP_IMAGE
-          docker inspect $SAMPLE_DATA_IMAGE || docker pull $SAMPLE_DATA_IMAGE
-          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE -Dsample.data.image=$SAMPLE_DATA_IMAGE"
+          # Verify images exist
+          docker images
+          docker inspect $APP_IMAGE || (echo "Application image not found" && exit 1)
+          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
+            docker inspect $SAMPLE_IMAGE || (echo "Sample data image not found" && exit 1)
+          fi
+
+          # Configure and run tests
+          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE"
+          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
+            export MAVEN_OPTS="$MAVEN_OPTS -Dsample.data.image=$SAMPLE_IMAGE"
+          fi
           mvn clean install -P integration-tests

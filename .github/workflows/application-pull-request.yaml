@@ -35,30 +35,31 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install Dependencies
-        if: ${{ inputs.install-dependencies }}
-        run: |
-          cd ${{ inputs.dockerfile-location }}
-          echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-          npm install
-          rm -rf .npmrc
-
-      # Build application image
       - name: Build Application
         run: |
           cd ${{ inputs.dockerfile-location }}
+          
+          if [ "${{ inputs.install-dependencies }}" = "true" ]; then
+            echo "Installing dependencies..."
+            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+            npm install
+            rm -rf .npmrc
+          fi
+          
           docker build -t ${{ inputs.application-name }}:test .
 
-      # Build sample data if enabled
       - name: Build Sample Data
         if: ${{ inputs.build-sample-data }}
         run: |
           cd ${{ inputs.sample-data-folder }}
+          echo "Installing sample data dependencies..."
+          echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
           npm install
+          rm -rf .npmrc
           docker build -t ${{ inputs.application-name }}-data-sample:test .
 
-      # Integration tests
       - name: Run Tests
         if: ${{ inputs.run-tests }}
         env:

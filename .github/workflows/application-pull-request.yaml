@@ -15,14 +15,6 @@ on:
       run-tests:
         type: boolean
         default: false
-      test-param-name:
-        type: string
-        default: app.image
-
-env:
-  IMAGE_TAG: test
-  NODE_VERSION: 18
-  MAVEN_GOAL: verify  # failsafe or smth
 
 jobs:
   build-and-test:
@@ -30,37 +22,38 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # Application setup
       - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 18
 
-      - name: Install Dependencies
-        if: ${{ inputs.install-dependencies }}
+      - name: Build Application
         run: |
           cd ${{ inputs.dockerfile-location }}
-          echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-          npm install
-          rm -rf .npmrc
-
-      - name: Build Docker Image
-        run: |
-          cd ${{ inputs.dockerfile-location }}
-          docker build -t ${{ inputs.application-name }}:${{ env.IMAGE_TAG }} .
+          
+          if [ "${{ inputs.install-dependencies }}" = "true" ]; then
+            echo "Installing dependencies..."
+            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+            npm install
+            rm -rf .npmrc
+          fi
+          
+          docker build -t ${{ inputs.application-name }}:test .
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}
         env:
-          TEST_IMAGE: ${{ inputs.application-name }}:${{ env.IMAGE_TAG }}
+          APP_IMAGE: ${{ inputs.application-name }}:test
         run: |
-          # Set up Java
-          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
-          
-          # Configure Maven and Testcontainers
+          # Verify images exist
+          docker inspect $APP_IMAGE
+
+          # Configure test environment
+          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE"
+
+          # Run tests with local images
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
-          
-          # Run tests with proper working directory
-          cd ${{ inputs.dockerfile-location }}
-          mvn ${{ env.MAVEN_GOAL }} -P integration-tests -D${{ inputs.test-param-name }}=$TEST_IMAGE
+          mvn clean install -P integration-tests

@@ -15,69 +15,61 @@ on:
       run-tests:
         type: boolean
         default: false
-      sample-data-folder:
+      test-param-name:
         type: string
-        default: ./application-data-sample/
-      build-sample-data:
-        type: boolean
-        default: false
+        default: app.image
+
+env:
+  IMAGE_TAG: test
+  NODE_VERSION: 18
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      image-name: ${{ steps.set-outputs.outputs.image-name }}
     steps:
       - uses: actions/checkout@v3
 
-      # Application setup
       - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ env.NODE_VERSION }}
 
-      - name: Build Application
+      - name: Install Dependencies
+        if: ${{ inputs.install-dependencies }}
         run: |
           cd ${{ inputs.dockerfile-location }}
-          
-          if [ "${{ inputs.install-dependencies }}" = "true" ]; then
-            echo "Installing dependencies..."
-            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
-            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
-            npm install
-            rm -rf .npmrc
-          fi
-          
-          docker build -t ${{ inputs.application-name }}:test .
-
-      - name: Build Sample Data
-        if: ${{ inputs.build-sample-data }}
-        run: |
-          cd ${{ inputs.sample-data-folder }}
-          echo "Installing sample data dependencies..."
           echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
           npm install
           rm -rf .npmrc
-          docker build -t ${{ inputs.application-name }}-data-sample:test .
+
+      - name: Build Docker Image
+        id: set-outputs
+        run: |
+          cd ${{ inputs.dockerfile-location }}
+          docker build -t ${{ inputs.application-name }}:${{ env.IMAGE_TAG }} .
+          echo "image-name=${{ inputs.application-name }}:${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
+
+  test:
+    needs: build
+    if: ${{ inputs.run-tests }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
 
       - name: Run Tests
-        if: ${{ inputs.run-tests }}
         env:
-          APP_IMAGE: ${{ inputs.application-name }}:test
-          SAMPLE_DATA_IMAGE: ${{ inputs.application-name }}-data-sample:test
+          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
         run: |
-          # Verify images exist
-          docker inspect $APP_IMAGE
-          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
-            docker inspect $SAMPLE_DATA_IMAGE
-          fi
-
-          # Configure test environment
-          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE"
-          if [ "${{ inputs.build-sample-data }}" = "true" ]; then
-            export MAVEN_OPTS="$MAVEN_OPTS -Dsample.data.image=$SAMPLE_DATA_IMAGE"
-          fi
-
-          # Run tests with local images
+          export MAVEN_OPTS="${{ inputs.test-param-name }}=$IMAGE_NAME"
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
-          mvn clean install -P integration-tests
+          mvn -f ${{ inputs.dockerfile-location }}/pom.xml clean test -P integration-tests

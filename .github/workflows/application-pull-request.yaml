@@ -46,11 +46,6 @@ jobs:
           
           docker build -t ${{ inputs.application-name }}:test .
 
-      - name: Print MAVEN_OPTS
-        run: |
-          export MAVEN_OPTS="-Dapp.image=$APP_IMAGE"
-          echo "MAVEN_OPTS=$MAVEN_OPTS"
-
       - name: Run Tests
         if: ${{ inputs.run-tests }}
         env:
@@ -61,6 +56,7 @@ jobs:
 
           # Configure test environment
           export MAVEN_OPTS="-Dapp.image=$APP_IMAGE"
+          echo "MAVEN_OPTS=$MAVEN_OPTS"
 
           # Run tests with local images
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV

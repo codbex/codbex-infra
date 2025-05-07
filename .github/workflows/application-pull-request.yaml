@@ -16,6 +16,9 @@ on:
         type: boolean
         default: false
 
+env:
+  APP_IMAGE: ${{ inputs.application-name }}:test
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest

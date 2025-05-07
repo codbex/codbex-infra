@@ -22,12 +22,11 @@ on:
 env:
   IMAGE_TAG: test
   NODE_VERSION: 18
+  MAVEN_GOAL: verify  # failsafe or smth
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      image-name: ${{ steps.set-outputs.outputs.image-name }}
     steps:
       - uses: actions/checkout@v3
 
@@ -47,29 +46,21 @@ jobs:
           rm -rf .npmrc
 
       - name: Build Docker Image
-        id: set-outputs
         run: |
           cd ${{ inputs.dockerfile-location }}
           docker build -t ${{ inputs.application-name }}:${{ env.IMAGE_TAG }} .
-          echo "image-name=${{ inputs.application-name }}:${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
-
-  test:
-    needs: build
-    if: ${{ inputs.run-tests }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
 
       - name: Run Tests
+        if: ${{ inputs.run-tests }}
         env:
-          IMAGE_NAME: ${{ needs.build.outputs.image-name }}
+          TEST_IMAGE: ${{ inputs.application-name }}:${{ env.IMAGE_TAG }}
         run: |
-          export MAVEN_OPTS="${{ inputs.test-param-name }}=$IMAGE_NAME"
+          # Set up Java
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
+          
+          # Configure Maven and Testcontainers
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
-          mvn -f ${{ inputs.dockerfile-location }}/pom.xml clean test -P integration-tests
+          
+          # Run tests with proper working directory
+          cd ${{ inputs.dockerfile-location }}
+          mvn ${{ env.MAVEN_GOAL }} -P integration-tests -D${{ inputs.test-param-name }}=$TEST_IMAGE

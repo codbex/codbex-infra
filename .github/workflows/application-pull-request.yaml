@@ -47,7 +47,7 @@ jobs:
             rm -rf .npmrc
           fi
           
-          docker build -t $APP_IMAGE:test .
+          docker build -t $APP_IMAGE .
 
       - name: Run Tests
         if: ${{ inputs.run-tests }}

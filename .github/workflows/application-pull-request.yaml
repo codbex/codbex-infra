@@ -17,7 +17,7 @@ on:
         default: false
       tests-package:
         type: string
-        default: "*.tests.application.*IT"
+        default: "*.test.application.*IT"
 
 env:
   APP_IMAGE: ${{ inputs.application-name }}:test

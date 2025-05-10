@@ -17,7 +17,7 @@ on:
         default: false
       tests-package:
         type: string
-        default: "*.test.application.*IT"
+        default: "*.tests.application.*IT"
 
 env:
   APP_IMAGE: ${{ inputs.application-name }}:test
@@ -58,7 +58,7 @@ jobs:
           # Run tests with local images
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
           
-          mvn clean install -P integration-tests -Dit.test=${{ inputs.tests-package }} -Dapp.image=$APP_IMAGE
+          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -Dapp.image=$APP_IMAGE
 
       - name: Generate a random artifact name
         if: always()

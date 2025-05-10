@@ -15,24 +15,27 @@ on:
       run-tests:
         type: boolean
         default: false
-      sample-data-folder:
+      tests-package:
         type: string
-        default: ./application-data-sample/
+        default: "*.tests.application.*IT"
+
+env:
+  IMAGE_NAME: ghcr.io/codbex/${{ inputs.application-name }}:latest
 
 jobs:
-  build-app:
+  build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      app-image: ${{ steps.export.outputs.app-image }}
+
     steps:
       - uses: actions/checkout@v3
+
       - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install Dependencies
+      - name: Install Dependencies (if needed)
         if: ${{ inputs.install-dependencies }}
         run: |
           cd ${{ inputs.dockerfile-location }}
@@ -41,47 +44,39 @@ jobs:
           npm install
           rm -rf .npmrc
 
-      - name: Build and Push Application Image
+      - name: Build and Push Application Image (and tag locally for test use)
         run: |
-          IMAGE_NAME=ghcr.io/codbex/${{ inputs.application-name }}:latest
           cd ${{ inputs.dockerfile-location }}
           docker buildx create --name codbex-builder --use || true
           docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          docker buildx build --push --tag $IMAGE_NAME --platform=linux/arm64,linux/amd64 .
-
-      - name: Export Output
-        id: export
-        run: echo "app-image=ghcr.io/codbex/${{ inputs.application-name }}:latest" >> $GITHUB_OUTPUT
-
-  build-sample-data:
-    if: ${{ inputs.run-tests }}
-    runs-on: ubuntu-latest
-    outputs:
-      sample-image: ${{ steps.export.outputs.sample-image }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Build Sample Data Image
-        run: |
-          SAMPLE_IMAGE=ghcr.io/codbex/${{ inputs.application-name }}-data-sample:test
-          docker build -t $SAMPLE_IMAGE ${{ inputs.sample-data-folder }}
-
-      - name: Export Output
-        id: export
-        run: echo "sample-image=ghcr.io/codbex/${{ inputs.application-name }}-data-sample:test" >> $GITHUB_OUTPUT
-
-  integration-tests:
-    if: ${{ inputs.run-tests }}
-    needs: [build-app, build-sample-data]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set Image Tags
-        run: |
-          echo "APP_IMAGE=${{ needs.build-app.outputs.app-image }}" >> $GITHUB_ENV
-          echo "SAMPLE_DATA_IMAGE=${{ needs.build-sample-data.outputs.sample-image }}" >> $GITHUB_ENV
+          
+          docker buildx build \
+            --push \
+            --tag $IMAGE_NAME \
+            --tag ${{ inputs.application-name }}:test \
+            --platform=linux/arm64,linux/amd64 .
 
       - name: Run Integration Tests
-        run: mvn clean install -P integration-tests
+        if: ${{ inputs.run-tests }}
+        run: |
+          echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
+
+          # Use the local test-tagged image
+          docker inspect ${{ inputs.application-name }}:test
+
+          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -Dapp.image=${{ inputs.application-name }}:test
+
+      - name: Generate a random artifact name
+        if: always()
+        id: generate_name
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          echo "ARTIFACT_NAME=selenide-screenshots-${TIMESTAMP}.zip" >> $GITHUB_ENV
+
+      - name: Upload selenide screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          retention-days: 1
+          name: ${{ env.ARTIFACT_NAME }}
+          path: integration-tests/build/reports/tests

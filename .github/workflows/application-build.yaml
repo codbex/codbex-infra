@@ -17,10 +17,13 @@ on:
         default: false
       tests-package:
         type: string
-        default: "*.tests.application.*IT"
+      image-property-name:
+        type: string
+        default: "app.image"
 
 env:
   IMAGE_NAME: ghcr.io/codbex/${{ inputs.application-name }}:latest
+  LOCAL_TEST_TAG: ${{ inputs.application-name }}:test
 
 jobs:
   build-and-test:
@@ -44,17 +47,11 @@ jobs:
           npm install
           rm -rf .npmrc
 
-      - name: Build and Push Application Image (and tag locally for test use)
+      - name: Build Application Image (locally, without pushing yet)
         run: |
           cd ${{ inputs.dockerfile-location }}
           docker buildx create --name codbex-builder --use || true
-          docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-          
-          docker buildx build \
-            --push \
-            --tag $IMAGE_NAME \
-            --tag ${{ inputs.application-name }}:test \
-            --platform=linux/arm64,linux/amd64 .
+          docker build -t $IMAGE_NAME -t $LOCAL_TEST_TAG .
 
       - name: Run Integration Tests
         if: ${{ inputs.run-tests }}
@@ -62,9 +59,16 @@ jobs:
           echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
 
           # Use the local test-tagged image
-          docker inspect ${{ inputs.application-name }}:test
+          docker inspect $LOCAL_TEST_TAG
 
-          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -Dapp.image=${{ inputs.application-name }}:test
+          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -D${{ inputs.image-property-name }}=$LOCAL_TEST_TAG
+
+      - name: Push Application Image (only if tests passed)
+        if: ${{ inputs.run-tests }}
+        run: |
+          echo "Pushing image to GHCR..."
+          docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+          docker push $IMAGE_NAME
 
       - name: Generate a random artifact name
         if: always()

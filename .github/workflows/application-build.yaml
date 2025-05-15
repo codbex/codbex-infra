@@ -56,11 +56,8 @@ jobs:
       - name: Run Integration Tests
         if: ${{ inputs.run-tests }}
         run: |
-          echo "TESTCONTAINERS_DOCKER_IMAGE_PULL_POLICY=never" >> $GITHUB_ENV
-
           # Use the local test-tagged image
           docker inspect $LOCAL_TEST_TAG
-
           mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -D${{ inputs.image-property-name }}=$LOCAL_TEST_TAG
 
       - name: Push Application Image (only if tests passed)

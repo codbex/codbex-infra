@@ -11,35 +11,64 @@ on:
         default: false
       dockerfile-location:
         type: string
-        default:  ./
+        default: ./
+      run-tests:
+        type: boolean
+        default: false
+      tests-package:
+        type: string
+      image-property-name:
+        type: string
+        default: "app.image"
+
+env:
+  APP_IMAGE: ${{ inputs.application-name }}:test
 
 jobs:
-  pull-request:
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
+      # Application setup
       - name: Install NodeJS
         if: ${{ inputs.install-dependencies }}
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install Dependencies
-        if: ${{ inputs.install-dependencies }}
+      - name: Build Application
         run: |
           cd ${{ inputs.dockerfile-location }}
-          echo "@codbex:registry=https://npm.pkg.github.com
-          //npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" > .npmrc
-          npm install
-          rm -rf .npmrc
+          
+          if [ "${{ inputs.install-dependencies }}" = "true" ]; then
+            echo "Installing dependencies..."
+            echo "@codbex:registry=https://npm.pkg.github.com" > .npmrc
+            echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_TOKEN }}" >> .npmrc
+            npm install
+            rm -rf .npmrc
+          fi
+          
+          docker build -t $APP_IMAGE .
 
-      - name: Build Docker Image
+      - name: Run Tests
+        if: ${{ inputs.run-tests }}
         run: |
-          cd ${{ inputs.dockerfile-location }}
-          docker buildx create --name codbex-builder
-          docker buildx use codbex-builder
-          docker buildx build --tag ${{ inputs.application-name }} -o type=image --platform=linux/arm64,linux/amd64 .
+          # Verify images exist
+          docker inspect $APP_IMAGE
+          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -D${{ inputs.image-property-name }}=$APP_IMAGE
+
+      - name: Generate a random artifact name
+        if: always()
+        id: generate_name
+        run: |
+          TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+          echo "ARTIFACT_NAME=selenide-screenshots-${TIMESTAMP}.zip" >> $GITHUB_ENV
+
+      - name: Upload selenide screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          retention-days: 1
+          name: ${{ env.ARTIFACT_NAME }}
+          path: integration-tests/build/reports/tests

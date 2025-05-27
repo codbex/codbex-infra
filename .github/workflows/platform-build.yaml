@@ -199,4 +199,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         if: ${{ inputs.upload-scanned-sarif-report }}
         with:
-          docker_scout_sarif_report: docker_scout_sarif_report.json
+          sarif_file: docker_scout_sarif_report.json

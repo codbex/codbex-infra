@@ -174,9 +174,15 @@ jobs:
         registry-password: ${{ secrets.DOCKER_PASSWORD }}
         command: quickview,cves
         image: ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
-        sarif-file: image-scan-report.sarif
+        sarif-file: docker_scout_sarif_report.json
         summary: true
         only-fixed: false
+
+    - name: Upload Docker Scout SARIF Report to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: ${{ inputs.upload-scanned-sarif-report }}
+      with:
+        docker_scout_sarif_report: docker_scout_sarif_report.json
 
     # Create release
     - name: "Create Release with image scan report"
@@ -190,7 +196,7 @@ jobs:
         prerelease: false
         files: |
           LICENSE
-          image-scan-report.sarif
+          docker_scout_sarif_report.json
           /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
         body: ${{ inputs.release-content }}
 
@@ -205,6 +211,6 @@ jobs:
         prerelease: false
         files: |
           LICENSE
-          image-scan-report.sarif
+          docker_scout_sarif_report.json
           /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
         body: ${{ inputs.release-content }}

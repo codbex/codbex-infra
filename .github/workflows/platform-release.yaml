@@ -24,6 +24,9 @@ on:
       scan-docker-image:
         type: boolean
         default: true
+      upload-scanned-sarif-report:
+        type: boolean
+        default: true
       release-otc-helm-chart:
         type: boolean
         default: false

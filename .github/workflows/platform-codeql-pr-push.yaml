@@ -70,7 +70,7 @@ jobs:
       - name: Generate Security Report for CodeQL Analysis
         uses: rsdmike/github-security-report-action@v3.0.4
         with:
-          template: report
+          template: summary
           token: ${{ secrets.GITHUB_TOKEN }}
           sarifReportDir: "sast_codeql_report_${{ matrix.language }}"
           outputDir: "security-reports"

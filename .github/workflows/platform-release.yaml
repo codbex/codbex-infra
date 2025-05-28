@@ -41,6 +41,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write # Required to upload SARIF to GitHub Security tab
+      packages: write
+      contents: write
+      actions: read
 
     steps:
     - uses: actions/checkout@v3
@@ -188,20 +191,6 @@ jobs:
       if: ${{ inputs.upload-scanned-sarif-report }}
       with:
         sarif_file: docker_scout_sarif_report.json
-
-    - name: Generate Security Report for Docker Scout Analysis
-      uses: rsdmike/github-security-report-action@v3.0.4
-      with:
-        template: report
-        token: ${{ secrets.GITHUB_TOKEN }}
-        sarifReportDir: "docker_scout_sarif_report.json"
-        outputDir: "security-reports"
-
-    - name: Upload generated security report as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sast-docker-scout-report
-        path: security-reports
 
     # Create release
     - name: "Create Release with image scan report"

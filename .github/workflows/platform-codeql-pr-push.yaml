@@ -78,7 +78,7 @@ jobs:
           sarifReportDir: "sast-codeql-report-${{ matrix.language }}"
           outputDir: "security-reports"
 
-      - name: Upload generated security report as artifact
+      - name: Upload Generated Security Report for CodeQL Analysis as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: sast-codeql-report-${{ matrix.language }}

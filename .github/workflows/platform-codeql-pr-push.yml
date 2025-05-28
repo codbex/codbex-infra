@@ -1,12 +1,8 @@
 name: "CodeQL Advanced [Push & PR]"
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  schedule:
-    - cron: '32 20 * * 0'
+  workflow_call:
+    inputs:
 
 permissions:
   security-events: write # Required to upload SARIF to GitHub Security tab

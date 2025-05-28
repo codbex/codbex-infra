@@ -21,7 +21,7 @@ on:
       docker-release:
         type: boolean
         default: true
-      scan-docker-image:
+      code-scans:
         type: boolean
         default: true
       upload-scanned-sarif-report:
@@ -37,7 +37,7 @@ permissions:
   contents: write
   
 jobs:
-  release:
+  release-artifacts:
     runs-on: ubuntu-latest
     permissions:
       security-events: write # Required to upload SARIF to GitHub Security tab
@@ -166,59 +166,165 @@ jobs:
         git checkout -b ${{ inputs.release-version }}
         git push --set-upstream origin ${{ inputs.release-version }}
 
-    # Scan docker image
-    - name: Log in Docker Hub # required dockerhub login for docker/scout-action
-      if: ${{ inputs.scan-docker-image }}
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: Docker Scout Quickview and CVEs
-      if: ${{ inputs.scan-docker-image }}
-      uses: docker/scout-action@v1
-      with:
-        registry-user: ${{ secrets.DOCKER_USERNAME }}
-        registry-password: ${{ secrets.DOCKER_PASSWORD }}
-        command: quickview,cves
-        image: ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
-        sarif-file: docker_scout_sarif_report.json
-        summary: true
-        only-fixed: false
+  sast-docker-scout-analyze:
+    runs-on: ubuntu-latest
+    needs: release-artifacts
+    permissions:
+      security-events: write # Required to upload SARIF to GitHub Security tab
 
-    - name: Upload Docker Scout SARIF Report to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: ${{ inputs.upload-scanned-sarif-report }}
-      with:
-        sarif_file: docker_scout_sarif_report.json
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    # Create release
-    - name: "Create Release with image scan report"
-      if: ${{ inputs.scan-docker-image }}
-      uses: softprops/action-gh-release@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: v${{ inputs.release-version }}
-        name: ${{ inputs.release-version }}
-        draft: false
-        prerelease: false
-        files: |
-          LICENSE
-          docker_scout_sarif_report.json
-          /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
-        body: ${{ inputs.release-content }}
+      - name: Log in Docker Hub # required dockerhub login for docker/scout-action
+        if: ${{ inputs.code-scans }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
-    - name: "Create Release"
-      if: ${{ !inputs.scan-docker-image }}
-      uses: softprops/action-gh-release@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: v${{ inputs.release-version }}
-        name: ${{ inputs.release-version }}
-        draft: false
-        prerelease: false
-        files: |
-          LICENSE
-          docker_scout_sarif_report.json
-          /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
-        body: ${{ inputs.release-content }}
+      - name: Docker Scout Quickview and CVEs
+        if: ${{ inputs.code-scans }}
+        uses: docker/scout-action@v1
+        with:
+          registry-user: ${{ secrets.DOCKER_USERNAME }}
+          registry-password: ${{ secrets.DOCKER_PASSWORD }}
+          command: quickview,cves
+          image: ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }}
+          sarif-file: sast_docker_scout_sarif.json
+          summary: true
+          only-fixed: false
+
+      - name: Upload Docker Scout SARIF file as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast_docker_scout_sarif.json
+          path: sast_docker_scout_sarif.json
+
+      - name: Upload Docker Scout SARIF Report to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: ${{ inputs.upload-scanned-sarif-report }}
+        with:
+          sarif_file: sast_docker_scout_sarif.json
+
+
+  sast-codeql-analyze:
+    runs-on: ubuntu-latest
+    needs: release-artifacts
+    permissions:
+      security-events: write # Required to upload SARIF to GitHub Security tab
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK Corretto 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '21'
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install TypeScript and esbuild
+        run: npm install -g typescript esbuild
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          config: |
+            name: "Comprehensive Multi-language CodeQL Config"
+            query-filters:
+              - exclude:
+                  id: java/path-injection
+            queries:
+              - uses: security-and-quality
+
+      - name: Build Java/Kotlin project
+        if: matrix.language == 'java-kotlin'
+        run: mvn clean install -P quick-build
+
+      - name: Perform CodeQL Analysis for language ${{ matrix.language }}
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+          output: "sast_codeql_report_${{ matrix.language }}"
+          upload: always
+
+      - name: Upload CodeQL Analysis SARIF file as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast_codeql_sarif_${{ matrix.language }}
+          path: sast_codeql_report_${{ matrix.language }}
+
+      - name: Generate Security Report for CodeQL Analysis
+        uses: rsdmike/github-security-report-action@v3.0.4
+        with:
+          template: report
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sarifReportDir: "sast_codeql_report_${{ matrix.language }}"
+          outputDir: "security-reports"
+
+      - name: Upload Generated CodeQL Analysis Security Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast_codeql_report_${{ matrix.language }}
+          path: security-reports
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: [sast-codeql-analyze, sast-docker-scout-analyze]
+    permissions:
+      packages: write
+      contents: write
+
+    steps:
+      - name: Download Docker Scout SARIF file artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sast_docker_scout_sarif.json
+
+      - name: Download CodeQL Analysis [javascript-typescript] SARIF file artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sast_codeql_sarif_javascript-typescript
+
+      - name: Download CodeQL Analysis [java-kotlin] SARIF file artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: sast_codeql_sarif_java-kotlin
+
+      - name: Download CodeQL Generated Security Report [javascript-typescript]
+        uses: actions/download-artifact@v4
+        with:
+          name: sast_codeql_report_javascript-typescript
+
+      - name: Download CodeQL Generated Security Report [java-kotlin]
+        uses: actions/download-artifact@v4
+        with:
+          name: sast_codeql_report_java-kotlin
+
+      - name: "Create GitHub Release"
+        if: ${{ inputs.code-scans }}
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: v${{ inputs.release-version }}
+          name: ${{ inputs.release-version }}
+          draft: false
+          prerelease: false
+          files: |
+            LICENSE
+            sast_docker_scout_sarif.json
+            sast_codeql_sarif_javascript-typescript
+            sast_codeql_report_javascript-typescript
+            sast_codeql_sarif_java-kotlin
+            sast_codeql_report_java-kotlin
+            /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
+          body: ${{ inputs.release-content }}
+

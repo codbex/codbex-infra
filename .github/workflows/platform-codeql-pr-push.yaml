@@ -61,25 +61,25 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{ matrix.language }}"
-          output: "sast-codeql-report-${{ matrix.language }}"
+          output: "sast_codeql_report_${{ matrix.language }}"
           upload: always
 
       - name: Upload CodeQL Analysis SARIF file as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sast-codeql-sarif-sarif-${{ matrix.language }}
-          path: sast-codeql-report-${{ matrix.language }}
+          name: sast_codeql_sarif_${{ matrix.language }}
+          path: sast_codeql_report_${{ matrix.language }}
 
       - name: Generate Security Report for CodeQL Analysis
         uses: rsdmike/github-security-report-action@v3.0.4
         with:
           template: report
           token: ${{ secrets.GITHUB_TOKEN }}
-          sarifReportDir: "sast-codeql-report-${{ matrix.language }}"
+          sarifReportDir: "sast_codeql_report_${{ matrix.language }}"
           outputDir: "security-reports"
 
-      - name: Upload Generated Security Report for CodeQL Analysis as Artifact
+      - name: Upload Generated CodeQL Analysis Security Report as Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sast-codeql-report-${{ matrix.language }}
+          name: sast_codeql_report_${{ matrix.language }}
           path: security-reports

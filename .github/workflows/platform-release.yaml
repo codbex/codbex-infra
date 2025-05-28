@@ -328,10 +328,10 @@ jobs:
       - name: Copy report files due to naming collisions
         if: ${{ inputs.code-scans }}
         run: |
-          cp scan-artifacts/sast_codeql_report_java-kotlin/report.pdf release_files/sast_codeql_report_java-kotlin.pdf
+          cp scan-artifacts/sast_codeql_report_java-kotlin/summary.pdf release_files/sast_codeql_report_java-kotlin.pdf
           cp scan-artifacts/sast_codeql_sarif_java-kotlin/java.sarif release_files/sast_codeql_sarif_java-kotlin.sarif
          
-          cp scan-artifacts/sast_codeql_report_javascript-typescript/report.pdf release_files/sast_codeql_report_javascript-typescript.pdf
+          cp scan-artifacts/sast_codeql_report_javascript-typescript/summary.pdf release_files/sast_codeql_report_javascript-typescript.pdf
           cp scan-artifacts/sast_codeql_sarif_javascript-typescript/javascript.sarif release_files/sast_codeql_sarif_javascript-typescript.sarif
          
           cp scan-artifacts/sast_docker_scout_sarif.json/sast_docker_scout_sarif.json release_files/sast_docker_scout_sarif.json

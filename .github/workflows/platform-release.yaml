@@ -139,6 +139,13 @@ jobs:
       run: |
         helm push /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz oci://ghcr.io/${{ github.repository_owner }}/helm/otc
 
+    - name: Upload  OTC Helm Chart as artifact
+      if: ${{ inputs.release-otc-helm-chart }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
+        path: /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
+
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}
       run: mvn deploy -P release -DskipTests -DstagingProgressTimeoutMinutes=10
@@ -294,30 +301,17 @@ jobs:
       contents: write
 
     steps:
-      - name: Download Docker Scout SARIF file artifact
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Scan Artifacts
         uses: actions/download-artifact@v4
         with:
+          path: scan-artifacts
           name: sast_docker_scout_sarif.json
 
-      - name: Download CodeQL Analysis [javascript-typescript] SARIF file artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: sast_codeql_sarif_javascript-typescript
-
-      - name: Download CodeQL Analysis [java-kotlin] SARIF file artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: sast_codeql_sarif_java-kotlin
-
-      - name: Download CodeQL Generated Security Report [javascript-typescript]
-        uses: actions/download-artifact@v4
-        with:
-          name: sast_codeql_report_javascript-typescript
-
-      - name: Download CodeQL Generated Security Report [java-kotlin]
-        uses: actions/download-artifact@v4
-        with:
-          name: sast_codeql_report_java-kotlin
+      - name: Display Downloaded Artifacts
+        run: ls -R scan-artifacts
 
       - name: "Create GitHub Release"
         if: ${{ inputs.code-scans }}
@@ -330,11 +324,11 @@ jobs:
           prerelease: false
           files: |
             LICENSE
-            sast_docker_scout_sarif.json
-            sast_codeql_sarif_javascript-typescript
-            sast_codeql_report_javascript-typescript
-            sast_codeql_sarif_java-kotlin
-            sast_codeql_report_java-kotlin
+            scan-artifacts/**
+            scan-artifacts/sast_codeql_sarif_javascript-typescript
+            scan-artifacts/sast_codeql_report_javascript-typescript
+            scan-artifacts/sast_codeql_sarif_java-kotlin
+            scan-artifacts/sast_codeql_report_java-kotlin
             /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
           body: ${{ inputs.release-content }}
 

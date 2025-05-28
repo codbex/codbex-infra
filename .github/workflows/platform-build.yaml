@@ -193,12 +193,18 @@ jobs:
           registry-password: ${{ secrets.DOCKER_PASSWORD }}
           command: quickview,cves
           image: ghcr.io/codbex/${{ inputs.platform-name }}:latest
-          sarif-file: docker_scout_sarif_report.json
+          sarif-file: sast_docker_scout_sarif.json
           summary: true
           only-fixed: false
+
+      - name: Upload Docker Scout SARIF file as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sast_docker_scout_sarif.json
+          path: sast_docker_scout_sarif.json
 
       - name: Upload Docker Scout SARIF Report to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         if: ${{ inputs.upload-scanned-sarif-report }}
         with:
-          sarif_file: docker_scout_sarif_report.json
+          sarif_file: sast_docker_scout_sarif.json

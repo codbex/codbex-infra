@@ -139,13 +139,6 @@ jobs:
       run: |
         helm push /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz oci://ghcr.io/${{ github.repository_owner }}/helm/otc
 
-    - name: Upload  OTC Helm Chart as artifact
-      if: ${{ inputs.release-otc-helm-chart }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
-        path: /tmp/${{ inputs.platform-name }}-${{ inputs.release-version }}-otc.tgz
-
     - name: Maven Publish Package
       if: ${{ inputs.maven-release }}
       run: mvn deploy -P release -DskipTests -DstagingProgressTimeoutMinutes=10
@@ -313,6 +306,26 @@ jobs:
       - name: Display Downloaded Artifacts
         run: ls -R scan-artifacts
 
+      - name: Create release files
+        run: mkdir release_files
+
+      - name: Copy mandatory files
+        run: |
+          cp LICENSE release_files/LICENSE
+
+      - name: Copy report files due to naming collisions
+        if: ${{ inputs.code-scans }}
+        run: |
+          cp scan-artifacts/sast_codeql_report_java-kotlin/report.pdf release_files/sast_codeql_report_java-kotlin.pdf
+          cp scan-artifacts/sast_codeql_sarif_java-kotlin/java.sarif release_files/sast_codeql_sarif_java-kotlin.sarif
+         
+          cp scan-artifacts/sast_codeql_report_javascript-typescript/report.pdf release_files/sast_codeql_report_javascript-typescript.pdf
+          cp scan-artifacts/sast_codeql_sarif_javascript-typescript/javascript.sarif release_files/sast_codeql_sarif_javascript-typescript.sarif
+         
+          cp scan-artifacts/sast_docker_scout_sarif.json/sast_docker_scout_sarif.json release_files/sast_docker_scout_sarif.json
+         
+          cp LICENSE release_files/LICENSE
+
       - name: "Create GitHub Release"
         uses: softprops/action-gh-release@v1
         with:
@@ -322,7 +335,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            LICENSE
-            scan-artifacts/**
+            release_files/**
           body: ${{ inputs.release-content }}
 

@@ -4,16 +4,17 @@ on:
   workflow_call:
     inputs:
 
-permissions:
-  security-events: write # Required to upload SARIF to GitHub Security tab
-  packages: read
-  actions: read
-  contents: read
+
 
 jobs:
   sast-codeql-analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write # Required to upload SARIF to GitHub Security tab
+      packages: read
+      actions: read
+      contents: read
 
     strategy:
       fail-fast: false

@@ -2,12 +2,6 @@ name: "CodeQL Advanced [Push & PR]"
 
 on:
   workflow_call:
-    inputs:
-      dummy:
-        required: false
-        type: string
-        default: dummyValue
-
 
 jobs:
   sast-codeql-analyze:

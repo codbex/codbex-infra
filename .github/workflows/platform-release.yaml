@@ -286,10 +286,18 @@ jobs:
         with:
           name: sast_codeql_report_${{ matrix.language }}
           path: security-reports
+  wait-for-scans:
+    needs:
+      - sast-codeql-analyze
+      - sast-docker-scout-analyze
+    runs-on: ubuntu-latest
+    if: always() # Runs even if previous jobs were skipped or failed
+    steps:
+      - run: echo "Proceeding to next job"
 
   github-release:
     runs-on: ubuntu-latest
-    needs: [sast-codeql-analyze, sast-docker-scout-analyze]
+    needs: wait-for-scans
     permissions:
       packages: write
       contents: write

@@ -290,7 +290,7 @@ jobs:
   dast-scan:
     if: ${{ inputs.code-scans }}
     name: Perform DAST testing using ZAP
-    needs: [build]
+    needs: release-artifacts
     runs-on: ubuntu-latest
 
     services:

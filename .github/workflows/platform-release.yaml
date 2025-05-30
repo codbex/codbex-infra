@@ -273,20 +273,6 @@ jobs:
           name: sast_codeql_sarif_${{ matrix.language }}
           path: sast_codeql_report_${{ matrix.language }}
 
-      - name: Generate Security Report for CodeQL Analysis
-        uses: rsdmike/github-security-report-action@v3.0.4
-        with:
-          template: summary
-          token: ${{ secrets.GITHUB_TOKEN }}
-          sarifReportDir: "sast_codeql_report_${{ matrix.language }}"
-          outputDir: "security-reports"
-
-      - name: Upload Generated CodeQL Analysis Security Report as Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sast_codeql_report_${{ matrix.language }}
-          path: security-reports
-          
   dast-scan:
     if: ${{ inputs.code-scans }}
     name: Perform DAST testing using ZAP
@@ -325,7 +311,7 @@ jobs:
           allow_issue_writing: false # create an issue with the results
           issue_title: '[DAST] ZAP Full Scan Report'
 
-  wait-for-scans:
+  generate-git-security-report:
     needs:
       - sast-codeql-scan
       - sast-docker-scout-scan
@@ -333,12 +319,27 @@ jobs:
     runs-on: ubuntu-latest
     if: always() # Runs even if previous jobs were skipped or failed
     steps:
-      - run: echo "Proceeding to next job"
+      - name: Create dummy reports folder
+        run: mkdir reports
+
+      - name: Generate GitHub Security Report
+        uses: rsdmike/github-security-report-action@v3.0.4
+        with:
+          template: summary
+          token: ${{ secrets.GITHUB_TOKEN }}
+          sarifReportDir: "reports"
+          outputDir: "security-report"
+
+      - name: Upload Generated GitHub Security Report as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: security_report
+          path: security-report
 
   github-release:
     if: ${{ always() && !failure() && !cancelled() }} #  run only if all prior jobs succeeded or were skipped, but not if one failed
     runs-on: ubuntu-latest
-    needs: wait-for-scans
+    needs: generate-git-security-report
     permissions:
       packages: write
       contents: write
@@ -347,16 +348,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create scan-artifacts folder
-        run: mkdir scan-artifacts
+      - name: Create uploaded-artifacts folder
+        run: mkdir uploaded-artifacts
 
       - name: Download Scan Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: scan-artifacts
+          path: uploaded-artifacts
 
       - name: Display Downloaded Artifacts
-        run: ls -R scan-artifacts
+        run: ls -R uploaded-artifacts
 
       - name: Create release files
         run: mkdir release_files
@@ -368,15 +369,14 @@ jobs:
       - name: Copy report files due to naming collisions
         if: ${{ inputs.code-scans }}
         run: |
-          cp scan-artifacts/sast_codeql_report_java-kotlin/summary.pdf release_files/sast_codeql_report_java-kotlin.pdf
-          cp scan-artifacts/sast_codeql_sarif_java-kotlin/java.sarif release_files/sast_codeql_sarif_java-kotlin.sarif
-         
-          cp scan-artifacts/sast_codeql_report_javascript-typescript/summary.pdf release_files/sast_codeql_report_javascript-typescript.pdf
-          cp scan-artifacts/sast_codeql_sarif_javascript-typescript/javascript.sarif release_files/sast_codeql_sarif_javascript-typescript.sarif
-         
-          cp scan-artifacts/sast_docker_scout_sarif.json/sast_docker_scout_sarif.json release_files/sast_docker_scout_sarif.json
+          cp uploaded-artifacts/security_report/summary.pdf release_files/security-report.pdf
           
-          cp scan-artifacts/dast_zap_report/report_html.html release_files/dast_zap_report.html
+          cp uploaded-artifacts/sast_codeql_sarif_java-kotlin/java.sarif release_files/sast_codeql_sarif_java-kotlin.sarif
+          cp uploaded-artifacts/sast_codeql_sarif_javascript-typescript/javascript.sarif release_files/sast_codeql_sarif_javascript-typescript.sarif
+         
+          cp uploaded-artifacts/sast_docker_scout_sarif.json/sast_docker_scout_sarif.json release_files/sast_docker_scout_sarif.json
+          
+          cp uploaded-artifacts/dast_zap_report/report_html.html release_files/dast_zap_report.html
          
           cp LICENSE release_files/LICENSE
 

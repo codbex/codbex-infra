@@ -312,12 +312,14 @@ jobs:
           issue_title: '[DAST] ZAP Full Scan Report'
 
   generate-git-security-report:
+    if: always() # Runs even if previous jobs were skipped or failed
     needs:
       - sast-codeql-scan
       - sast-docker-scout-scan
       - dast-scan
     runs-on: ubuntu-latest
-    if: always() # Runs even if previous jobs were skipped or failed
+    permissions:
+      security-events: read
     steps:
       - name: Create dummy reports folder
         run: mkdir reports

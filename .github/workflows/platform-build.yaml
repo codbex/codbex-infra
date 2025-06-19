@@ -21,6 +21,10 @@ on:
       release-otc-helm-chart:
         type: boolean
         default: false
+      oras_repos:
+        description: 'Comma-separated list of ORAS repositories to pull (optional)'
+        required: false
+        default: ''
 
 jobs:
 
@@ -97,7 +101,11 @@ jobs:
         docker buildx create --use
         
         cd application
-        docker buildx build --platform linux/amd64,linux/arm64 --tag ghcr.io/codbex/${{ inputs.platform-name }}:latest --push .
+        docker buildx build \
+          --build-arg ORAS_USERNAME=oauth2 \
+          --build-arg ORAS_PASSWORD=${{ secrets.GITHUB_TOKEN }} \
+          --build-arg ORAS_REPOS="${{ github.event.inputs.oras_repos }}" \
+          --platform linux/amd64,linux/arm64 --tag ghcr.io/codbex/${{ inputs.platform-name }}:latest --push .
 
   integration-tests:
     if: ${{ inputs.integration-tests }}

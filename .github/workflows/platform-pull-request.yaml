@@ -18,6 +18,10 @@ on:
       release-otc-helm-chart:
         type: boolean
         default: false
+      oras_repos:
+        description: 'Comma-separated list of ORAS repositories to pull (optional)'
+        required: false
+        default: ''
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -102,7 +106,11 @@ jobs:
         docker buildx create --name codbex-builder
         docker buildx use codbex-builder
         cd application
-        docker buildx build --tag ${{ inputs.platform-name }} --no-cache -o type=image --platform=linux/arm64,linux/amd64 .
+        docker buildx build \
+        --build-arg ORAS_USERNAME=oauth2 \
+        --build-arg ORAS_PASSWORD=${{ secrets.GITHUB_TOKEN }} \
+        --build-arg ORAS_REPOS="${{ github.event.inputs.oras_repos }}" \
+        --tag ${{ inputs.platform-name }} --no-cache -o type=image --platform=linux/arm64,linux/amd64 .
 
   integration-tests:
     if: ${{ inputs.integration-tests }}

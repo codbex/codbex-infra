@@ -100,7 +100,7 @@ jobs:
     - name: Setup ORAS CLI
       uses: oras-project/setup-oras@v1
 
-    - name: Login to GHCR
+    - name: ORAS Login to GHCR
       run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u oauth2 --password-stdin
 
     - name: Pull ORAS Repos

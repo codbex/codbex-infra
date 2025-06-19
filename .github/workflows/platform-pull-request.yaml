@@ -19,8 +19,9 @@ on:
         type: boolean
         default: false
       oras_repos:
-        description: 'Comma-separated list of ORAS repositories to pull (optional)'
         required: false
+        type: string
+        description: 'Comma-separated list of ORAS repositories to pull (optional)'
         default: ''
 
 concurrency:

@@ -121,6 +121,22 @@ jobs:
     - name: Maven Build
       run: mvn clean install
 
+    - name: Setup ORAS CLI
+      uses: oras-project/oras-action@v1
+
+    - name: Login to GHCR
+      run: oras login ghcr.io -u oauth2 -p ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull ORAS Repos
+      env:
+        ORAS_REPOS: ${{ github.event.inputs.oras_repos }}
+      run: |
+        mkdir -p oras-artifacts
+        IFS=','; for repo in $ORAS_REPOS; do
+          echo "Pulling $repo"
+          oras pull "$repo" -o application/oras-artifacts
+        done
+
     - name: Build and Push Docker Image
       if: ${{ inputs.docker-release }}
       run: |
@@ -129,9 +145,6 @@ jobs:
         
         cd application
         docker buildx build \
-          --build-arg ORAS_USERNAME=oauth2 \
-          --build-arg ORAS_PASSWORD=${{ secrets.GITHUB_TOKEN }} \
-          --build-arg ORAS_REPOS="${{ github.event.inputs.oras_repos }}" \
           --platform linux/amd64,linux/arm64 --tag ghcr.io/codbex/${{ inputs.platform-name }}:${{ inputs.release-version }} --push .
 
     - name: OTC Helm - package the chart

@@ -65,6 +65,8 @@ jobs:
         
   pull-request:
     runs-on: ${{ matrix.os }}-latest
+    permissions:
+      packages: read
     strategy:
       matrix:
         os: [ubuntu]

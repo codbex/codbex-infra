@@ -122,10 +122,10 @@ jobs:
       run: mvn clean install
 
     - name: Setup ORAS CLI
-      uses: oras-project/oras-action@v1
+      uses: oras-project/setup-oras@v1
 
     - name: Login to GHCR
-      run: oras login ghcr.io -u oauth2 -p ${{ secrets.GITHUB_TOKEN }}
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u oauth2 --password-stdin
 
     - name: Pull ORAS Repos
       env:

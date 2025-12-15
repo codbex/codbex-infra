@@ -17,7 +17,7 @@ on:
         default: true
       upload-scanned-sarif-report:
         type: boolean
-        default: false # enable the upload when the sast_docker_scout_sarif.json has allowed number of related locations < 1000
+        default: true
       release-otc-helm-chart:
         type: boolean
         default: false

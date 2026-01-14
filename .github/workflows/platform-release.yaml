@@ -333,7 +333,6 @@ jobs:
         with:
           sarif_file: sast_docker_scout_sarif.json
 
-
   sast-codeql-scan:
     if: ${{ inputs.code-scans }}
     name: Analyze (${{ matrix.language }})

@@ -245,7 +245,7 @@ jobs:
   scan-image:
     if: ${{ inputs.docker-build }}
     name: Scan Docker image using Docker Scout
-    needs: [build]
+    needs: [build-docker-manifest]
     runs-on: ubuntu-latest
 
     steps:
@@ -283,7 +283,7 @@ jobs:
   dast-scan:
     if: ${{ inputs.docker-build }}
     name: Perform DAST testing using ZAP
-    needs: [build]
+    needs: [build-docker-manifest]
     runs-on: ubuntu-latest
 
     services:

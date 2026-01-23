@@ -20,7 +20,9 @@ on:
       dockerfile-location:
         type: string
         default:  ./
-    
+      before-build-command:
+        type: string
+
 run-name: 'version set to ${{ inputs.release-version }} for release'
 
 jobs:
@@ -54,6 +56,10 @@ jobs:
         git checkout ${{ inputs.branch }}
         git config user.name "$GITHUB_ACTOR"
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+    - name: Build and Push Docker Image
+      if: ${{ inputs.before-build-command }}
+      run: ${{ inputs.before-build-command }}
 
     - name: Build and Push Docker Image
       run: |

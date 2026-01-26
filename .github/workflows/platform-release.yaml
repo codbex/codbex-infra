@@ -94,6 +94,22 @@ jobs:
       - name: Build Dirigible
         run: mvn clean install
 
+      - name: Setup ORAS CLI
+        uses: oras-project/setup-oras@v1
+  
+      - name: ORAS Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u oauth2 --password-stdin
+  
+      - name: Pull ORAS Repos
+        env:
+          ORAS_REPOS: ${{ inputs.oras_repos }}
+        run: |
+          mkdir -p oras-artifacts
+          IFS=','; for repo in $ORAS_REPOS; do
+            echo "Pulling $repo"
+            oras pull "$repo" -o application/oras-artifacts
+          done
+
       - name: Log in to Registry
         uses: docker/login-action@v3
         with:

@@ -75,7 +75,6 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: '21'
-          architecture: x64
 
       - name: Install NodeJS
         uses: actions/setup-node@v4

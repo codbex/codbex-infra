@@ -22,7 +22,7 @@ jobs:
           node-version: 22.x
 
       - name: Install TypeScript compiler
-        run: npm i -g typescript
+        run: npm i -g typescript@5.9.3
 
       - name: Install Dependencies and Build TypeScript
         run: |

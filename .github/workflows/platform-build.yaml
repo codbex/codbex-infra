@@ -210,11 +210,8 @@ jobs:
         with:
           node-version: 22.x
           
-      - name: Install esbuild
-        run: npm i -g esbuild
-        
-      - name: Install TypeScript compiler
-        run: npm i -g typescript
+      - name: Install TypeScript and esbuild
+        run: npm install -g typescript esbuild
 
       - name: Install ttyd (prebuilt)
         run: |

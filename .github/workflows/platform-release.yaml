@@ -217,12 +217,9 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: 22.x
-        
-    - name: Install esbuild
-      run: npm i -g esbuild
-      
-    - name: Install TypeScript compiler
-      run: npm i -g typescript
+
+    - name: Install TypeScript and esbuild
+      run: npm install -g typescript esbuild
 
     # Update versions with current release version
     - name: "Configure Git"

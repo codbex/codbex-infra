@@ -99,12 +99,16 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Pull image by digest
+        if: ${{ inputs.run-tests }}
+        run: docker pull ghcr.io/codbex/${{ inputs.application-name }}@${{ steps.build.outputs.digest }}
+
       - name: Run Integration Tests
         if: ${{ inputs.run-tests }}
         run: |
           # Use the local test-tagged image
-          docker inspect ${{ steps.build.outputs.digest }}
-          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -D${{ inputs.image-property-name }}=${{ steps.build.outputs.digest }}
+          docker inspect ghcr.io/codbex/${{ inputs.application-name }}@${{ steps.build.outputs.digest }}
+          mvn clean install -P integration-tests "-Dit.test=${{ inputs.tests-package }}" -D${{ inputs.image-property-name }}=ghcr.io/codbex/${{ inputs.application-name }}@${{ steps.build.outputs.digest }}
 
       - name: Generate a random artifact name
         if: always()

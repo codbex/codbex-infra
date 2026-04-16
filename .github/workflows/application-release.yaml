@@ -81,7 +81,7 @@ jobs:
       id: build
       uses: docker/build-push-action@v6
       with:
-        context: application
+        context: ${{ inputs.dockerfile-location }}
         platforms: ${{ matrix.platform }}
         tags: ghcr.io/codbex/${{ inputs.application-name }}
         outputs: type=image,push-by-digest=true,name-canonical=true,push=true

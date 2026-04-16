@@ -93,7 +93,7 @@ jobs:
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ inputs.application-name }}-${{ matrix.platform }}
+          name: ${{ inputs.application-name }}-digests-${{ matrix.platform }}
           path: /tmp/digests/${{ inputs.application-name }}/*
           if-no-files-found: error
           retention-days: 1
@@ -132,7 +132,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: /tmp/digests-${{ inputs.application-name }}
-          pattern: digests-${{ inputs.application-name }}-*
+          pattern: ${{ inputs.application-name }}-digests-*
           merge-multiple: true
 
       - name: Debug digests
